@@ -91,11 +91,11 @@ PRINT PROC near
 PRINT ENDP
 ;----------------------
 IBM_TYPE PROC near
-	push BX
+	push AX
 	push DX
 	push ES
-	mov BX, 0F000h
-	mov ES, BX
+	mov AX, 0F000h
+	mov ES, AX
 	mov AL, ES:[0FFFEh]
 
 	cmp AL, 0FFh
@@ -195,9 +195,6 @@ DOS_VER ENDP
 ;-----------------------------------
 ; КОД
 BEGIN:
-	mov AX, 0F000h
-	mov ES, AX
-	mov AL, ES:[0FFFFh]
 	call IBM_TYPE
 	call DOS_VER
 	xor AL, AL
