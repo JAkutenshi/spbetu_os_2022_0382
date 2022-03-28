@@ -89,7 +89,7 @@ loop_wd:
 	cmp AX, 10
 	jae loop_wd
 	cmp AL, 00h
-	je end_1
+	je end_2
 	or AL, 30h
 	mov [SI], AL
 end_2:  
