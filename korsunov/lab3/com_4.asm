@@ -236,7 +236,7 @@ PRINT_MCB_TABLE PROC near
 			mov DL, ES:[BX]
 			call WRITE_MESSAGE_BYTE
 			inc BX
-			loop lp4 ; вывод последних 8 байт (индексы в списке у них 1-15)
+			loop lp4 ; вывод последних 8 байт
 		
 		mov DL, 0dh
 		call WRITE_MESSAGE_BYTE
