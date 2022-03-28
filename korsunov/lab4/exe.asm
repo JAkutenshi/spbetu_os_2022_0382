@@ -53,7 +53,7 @@ CODE SEGMENT
     begin:
         mov keep_SP, SP
         mov keep_AX, AX
-        mov keep_ss, SS
+        mov keep_SS, SS
 		
         mov SP, offset begin
         mov AX, seg my_stack
