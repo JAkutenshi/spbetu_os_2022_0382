@@ -5,9 +5,9 @@ START:	JMP  BEGIN
 ; Данные
 UnMem DB 'Segment address of unavailable memory:     h', 0DH, 0AH, '$'
 EnvAddr DB 'Segment address of the environment:     h', 0DH, 0AH, '$'
-Tail DB 'Command line tail: ', 0DH, 0AH, '$'
+Tail DB 'Command line tail: ', '$'
 EnvCont DB 'Environment area content: ', 0DH, 0AH, '$'
-PathMod DB 'Path of the module: ', 0DH, 0AH, '$'
+PathMod DB 'Path of the module: ', '$'
 
 ZeroLength DB '    Command line tail has a zero length.', 0DH, 0AH, '$'
 
@@ -98,6 +98,7 @@ TAIL_CL PROC near
 	cmp cl, 0
 	je zero_length
 	mov di, 81h
+	
 	label1:
 		mov dl, es:[di]
 		call SYMB_PRINT
@@ -117,33 +118,57 @@ TAIL_CL ENDP
 
 ENV_CONTENT PROC near
 	mov dx, offset EnvCont
-		call PRINT
-		mov di, 2Ch
-		dec di
+	call PRINT
+	mov di, 2Ch
+	mov es, ds:[di]
+	xor di, di
+	
 	cycle:
-		inc di
         	mov dl, es:[di]
     		cmp dl, 0
     		je check_second_zero
 	        call SYMB_PRINT
+	        inc di
     		jmp cycle
 	check_second_zero:
-		inc di
-    		mov dl, es:[di]
+		mov dl, 0Dh
+		call SYMB_PRINT
+   		mov dl,0Ah
+   		call SYMB_PRINT
+   		inc di
+   		mov dl, es:[di]
     		cmp dl, 0
     		jne cycle
-		mov dl, 0DH
-		call SYMB_PRINT
-   		mov dl,0AH
-   		call SYMB_PRINT
    		ret	
 ENV_CONTENT ENDP
+	
+PATH_MOD PROC near
+	add di, 3
+	mov dx, offset PathMod
+	call PRINT
+	
+	cycle2:
+		mov dl, es:[di]
+		cmp dl, 0
+		je end_string
+		call SYMB_PRINT
+		inc di
+		jmp cycle2
+	end_string:
+		mov dl, 0Dh
+		call SYMB_PRINT
+		mov dl, 0Ah
+		call SYMB_PRINT
+		ret
+PATH_MOD ENDP
+	
 ; --------------------------------------------------
 BEGIN:
 	call SEG_ADDR1
 	call SEG_ADDR2
 	call TAIL_CL
 	call ENV_CONTENT
+	call PATH_MOD
 	
 ; Выход в DOS
 	xor AL, AL
