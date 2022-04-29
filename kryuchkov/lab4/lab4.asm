@@ -105,7 +105,7 @@ int 21h
 mov si, offset int_id
 sub si, offset interrupt
 mov dx, es:[bx+si]
-cmp dx, 0abcdh
+cmp dx, 07777
 je loaded
 mov int_installed, 0
 
