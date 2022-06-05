@@ -211,6 +211,9 @@ DOS_VER PROC near
 DOS_VER ENDP
 ; ****************************************
 MAIN PROC far
+	sub ax, ax
+	mov ax, DATA
+	mov ds, ax
 	call PC_TYPE
 	call DOS_VER
 ; Выход в DOS
