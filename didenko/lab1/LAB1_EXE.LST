@@ -1,0 +1,337 @@
+Microsoft (R) Macro Assembler Version 5.10                  2/16/22 19:10:06
+                                                             Page     1-1
+
+
+				; Стек программы
+ 0000				AStack SEGMENT STACK
+ 0000  0080[			 DW 128 DUP(?)
+	   ????			
+			 ]	
+				
+ 0100				AStack ENDS
+				
+				
+ 0000				DATA SEGMENT
+ 0000  50 43 0D 0A 24		PC_n db "PC",0Dh,0Ah,'$'
+ 0005  50 43 2F 58 54 0D	PC_XT_n db "PC/XT",0Dh,0Ah,'$'
+       0A 24			
+ 000D  41 54 0D 0A 24		PC_AT_n db "AT",0Dh,0Ah,'$'
+ 0012  50 53 32 20 6D 6F	PS2_model_30_n db "PS2 model 30",0Dh,0Ah,'$'
+       64 65 6C 20 33 30	
+       0D 0A 24			
+ 0021  50 53 32 20 6D 6F	PS2_model_50_or_60_n db "PS2 model 50 or 60",0D
+				h,0Ah,'$'
+       64 65 6C 20 35 30	
+       20 6F 72 20 36 30	
+       0D 0A 24			
+ 0036  50 53 32 20 6D 6F	PS2_model_80_n db "PS2 model 80",0Dh,0Ah,'$'
+       64 65 6C 20 38 30	
+       0D 0A 24			
+ 0045  50 43 6A 72 0D 0A	PCjr_n db "PCjr",0Dh,0Ah,'$'
+       24			
+ 004C  50 43 20 43 6F 6E	PC_conv_n db "PC Convertible",0Dh,0Ah,'$'
+       76 65 72 74 69 62	
+       6C 65 0D 0A 24		
+ 005D  4E 6F 6E 65 20 63	def_n db "None coincidences",0Dh,0Ah,'$'
+       6F 69 6E 63 69 64	
+       65 6E 63 65 73 0D	
+       0A 24			
+				
+ 0071  56 65 72 73 69 6F	VERSIONS db 'Version MS-DOS:  .  ',0DH,0AH,'$'
+       6E 20 4D 53 2D 44	
+       4F 53 3A 20 20 2E	
+       20 20 0D 0A 24		
+ 0088  53 65 72 69 61 6C	SERIAL_NUMBER db  'Serial number OEM:  ',0DH,0A
+				H,'$'
+       20 6E 75 6D 62 65	
+       72 20 4F 45 4D 3A	
+       20 20 0D 0A 24		
+ 009F  55 73 65 72 20 73	USER_NUMBER db  'User serial number:       H $'
+       65 72 69 61 6C 20	
+       6E 75 6D 62 65 72	
+       3A 20 20 20 20 20	
+       20 20 48 20 24		
+				
+				
+ 00BC				DATA ENDS
+				
+ 0000				CODE SEGMENT
+Microsoft (R) Macro Assembler Version 5.10                  2/16/22 19:10:06
+                                                             Page     1-2
+
+
+				 ASSUME CS:CODE, DS:DATA, SS:AStack
+				
+ 0000				TETR_TO_HEX PROC near
+ 0000  24 0F			   and AL,0Fh
+ 0002  3C 09			   cmp AL,09
+ 0004  76 02			   jbe next
+ 0006  04 07			   add AL,07
+ 0008				next:
+ 0008  04 30			   add AL,30h
+ 000A  C3			   ret
+ 000B				TETR_TO_HEX ENDP
+				;-------------------------------
+ 000B				BYTE_TO_HEX PROC near
+				;байт в AL переводится в два символа шест. числ
+				а в AX
+ 000B  51			   push CX
+ 000C  8A E0			   mov AH,AL
+ 000E  E8 0000 R		   call TETR_TO_HEX
+ 0011  86 C4			   xchg AL,AH
+ 0013  B1 04			   mov CL,4
+ 0015  D2 E8			   shr AL,CL
+ 0017  E8 0000 R		   call TETR_TO_HEX ;в AL старшая цифра
+ 001A  59			   pop CX ;в AH младшая
+ 001B  C3			   ret
+ 001C				BYTE_TO_HEX ENDP
+				;-------------------------------
+ 001C				WRD_TO_HEX PROC near
+				;перевод в 16 с/с 16-ти разрядного числа
+				; в AX - число, DI - адрес последнего символа
+ 001C  53			   push BX
+ 001D  8A FC			   mov BH,AH
+ 001F  E8 000B R		   call BYTE_TO_HEX
+ 0022  88 25			   mov [DI],AH
+ 0024  4F			   dec DI
+ 0025  88 05			   mov [DI],AL
+ 0027  4F			   dec DI
+ 0028  8A C7			   mov AL,BH
+ 002A  E8 000B R		   call BYTE_TO_HEX
+ 002D  88 25			   mov [DI],AH
+ 002F  4F			   dec DI
+ 0030  88 05			   mov [DI],AL
+ 0032  5B			   pop BX
+ 0033  C3			   ret
+ 0034				WRD_TO_HEX ENDP
+				;----------------------------------------------
+				----
+ 0034				BYTE_TO_DEC PROC near
+				; перевод в 10с/с, SI - адрес поля младшей цифр
+				ы
+ 0034  51			   push CX
+ 0035  52			   push DX
+ 0036  32 E4			   xor AH,AH
+ 0038  33 D2			   xor DX,DX
+ 003A  B9 000A			   mov CX,10
+Microsoft (R) Macro Assembler Version 5.10                  2/16/22 19:10:06
+                                                             Page     1-3
+
+
+ 003D				loop_bd:
+ 003D  F7 F1			   div CX
+ 003F  80 CA 30			   or DL,30h
+ 0042  88 14			   mov [SI],DL
+ 0044  4E			   dec SI
+ 0045  33 D2			   xor DX,DX
+ 0047  3D 000A			   cmp AX,10
+ 004A  73 F1			   jae loop_bd
+ 004C  3C 00			   cmp AL,00h
+ 004E  74 04			   je end_l
+ 0050  0C 30			   or AL,30h
+ 0052  88 04			   mov [SI],AL
+ 0054				end_l:
+ 0054  5A			   pop DX
+ 0055  59			   pop CX
+ 0056  C3			   ret
+ 0057				BYTE_TO_DEC ENDP
+				
+				
+ 0057				PRINT proc near
+ 0057  B4 09			mov AH,09h
+ 0059  CD 21			INT 21h
+ 005B  C3			ret
+ 005C				PRINT endp
+				
+ 005C				type_PC proc near
+ 005C  B8 F000			 mov ax, 0f000h
+ 005F  8E C0			 mov es, ax
+ 0061  26: A0 FFFE		 mov al, es:[0fffeh]
+ 0065  3C F8			 cmp al, 0F8h
+ 0067  72 50			 jb define
+ 0069  3C FF			 cmp al,0FFh
+ 006B  73 1C			 jae pc
+ 006D  3C FE			 cmp al, 0FEh
+ 006F  73 1E			 jae pc_xt
+ 0071  3C FD			 cmp al, 0FDh
+ 0073  73 38			 jae pcjr
+ 0075  3C FC			 cmp al, 0FCh
+ 0077  73 28			 jae ps2_model_50_or_60
+ 0079  3C FB			 cmp al, 0FBh
+ 007B  73 12			 jae pc_xt
+ 007D  3C FA			 cmp al, 0FAh
+ 007F  73 1A			 jae ps2_model_30
+ 0081  3C F9			 cmp al, 0F9h
+ 0083  73 2E			 jae pc_conv
+ 0085  3C F8			 cmp al, 0F8h
+ 0087  73 1E			 jae ps2_model_80
+ 0089				 pc:
+ 0089  BA 0000 R		  mov dx,offset PC_n
+ 008C  EB 31 90			  jmp call_print
+ 008F				 pc_xt:
+ 008F  BA 0005 R		  mov dx,offset PC_XT_n
+ 0092  EB 2B 90			  jmp call_print
+ 0095				 pc_at:
+Microsoft (R) Macro Assembler Version 5.10                  2/16/22 19:10:06
+                                                             Page     1-4
+
+
+ 0095  BA 000D R		  mov dx,offset PC_AT_n
+ 0098  EB 25 90			  jmp call_print
+ 009B				 ps2_model_30:
+ 009B  BA 0012 R		  mov dx,offset PS2_model_30_n
+ 009E  EB 1F 90			  jmp call_print
+ 00A1				 ps2_model_50_or_60:
+ 00A1  BA 0021 R		  mov dx,offset PS2_model_50_or_60_n
+ 00A4  EB 19 90			  jmp call_print
+ 00A7				 ps2_model_80:
+ 00A7  BA 0036 R		  mov dx,offset PS2_model_80_n
+ 00AA  EB 13 90			  jmp call_print
+ 00AD				 pcjr:
+ 00AD  BA 0045 R		  mov dx,offset PCjr_n
+ 00B0  EB 0D 90			  jmp call_print
+ 00B3				 pc_conv:
+ 00B3  BA 004C R		  mov dx,offset PC_conv_n
+ 00B6  EB 07 90			  jmp call_print
+ 00B9				 define:
+ 00B9  BA 005D R		  mov dx,offset def_n
+ 00BC  EB 01 90			  jmp call_print
+ 00BF				 call_print:
+ 00BF  E8 0057 R		  call PRINT  
+ 00C2  C3			 ret
+ 00C3				 type_PC endp
+				 
+				
+ 00C3				ms_version PROC near
+ 00C3  B4 30			 mov ah, 30h
+ 00C5  CD 21			 int 21h
+ 00C7  50			 push ax
+					
+ 00C8  BE 0071 R		 mov si, offset VERSIONS
+ 00CB  83 C6 10			 add si, 16
+ 00CE  E8 0034 R		 call BYTE_TO_DEC
+ 00D1  58			 pop ax
+ 00D2  8A C4			 mov al, ah
+ 00D4  83 C6 03			 add si, 3
+ 00D7  E8 0034 R		 call BYTE_TO_DEC
+ 00DA  BA 0071 R		 mov dx, offset VERSIONS
+ 00DD  E8 0057 R		 call PRINT
+				   	
+ 00E0  BE 0088 R		 mov si, offset SERIAL_NUMBER
+ 00E3  83 C6 13			 add si, 19
+ 00E6  8A C7			 mov al, bh
+ 00E8  E8 0034 R		 call BYTE_TO_DEC
+ 00EB  BA 0088 R		 mov dx, offset SERIAL_NUMBER
+ 00EE  E8 0057 R		 call PRINT
+					
+ 00F1  BF 009F R		 mov di, offset USER_NUMBER
+ 00F4  83 C7 19			 add di, 25
+ 00F7  8B C1			 mov ax, cx
+ 00F9  E8 001C R		 call WRD_TO_HEX
+ 00FC  8A C3			 mov al, bl
+ 00FE  E8 000B R		 call BYTE_TO_HEX
+Microsoft (R) Macro Assembler Version 5.10                  2/16/22 19:10:06
+                                                             Page     1-5
+
+
+ 0101  83 EF 02			 sub di, 2
+ 0104  89 05			 mov [di], ax
+ 0106  BA 009F R		 mov dx, offset USER_NUMBER
+ 0109  E8 0057 R		 call PRINT
+ 010C  C3			 ret
+ 010D				ms_version endp
+				 
+				
+ 010D				Main PROC FAR
+ 010D  1E			 push DS
+ 010E  2B C0			 sub AX,AX
+ 0110  50			 push AX
+ 0111  B8 ---- R		 mov AX,DATA
+ 0114  8E D8			 mov DS,AX
+ 0116  E8 005C R		 call type_PC
+ 0119  E8 00C3 R		 call ms_version
+				
+ 011C  CB			 ret
+				
+ 011D				Main ENDP
+ 011D				CODE ENDS
+				 END Main
+Microsoft (R) Macro Assembler Version 5.10                  2/16/22 19:10:06
+                                                             Symbols-1
+
+
+Segments and Groups:
+
+                N a m e         	Length	 Align	Combine Class
+
+ASTACK . . . . . . . . . . . . .  	0100	PARA	STACK	
+CODE . . . . . . . . . . . . . .  	011D	PARA	NONE	
+DATA . . . . . . . . . . . . . .  	00BC	PARA	NONE	
+
+Symbols:            
+
+                N a m e         	Type	 Value	 Attr
+
+BYTE_TO_DEC  . . . . . . . . . .  	N PROC	0034	CODE	Length = 0023
+BYTE_TO_HEX  . . . . . . . . . .  	N PROC	000B	CODE	Length = 0011
+
+CALL_PRINT . . . . . . . . . . .  	L NEAR	00BF	CODE
+
+DEFINE . . . . . . . . . . . . .  	L NEAR	00B9	CODE
+DEF_N  . . . . . . . . . . . . .  	L BYTE	005D	DATA
+
+END_L  . . . . . . . . . . . . .  	L NEAR	0054	CODE
+
+LOOP_BD  . . . . . . . . . . . .  	L NEAR	003D	CODE
+
+MAIN . . . . . . . . . . . . . .  	F PROC	010D	CODE	Length = 0010
+MS_VERSION . . . . . . . . . . .  	N PROC	00C3	CODE	Length = 004A
+
+NEXT . . . . . . . . . . . . . .  	L NEAR	0008	CODE
+
+PC . . . . . . . . . . . . . . .  	L NEAR	0089	CODE
+PCJR . . . . . . . . . . . . . .  	L NEAR	00AD	CODE
+PCJR_N . . . . . . . . . . . . .  	L BYTE	0045	DATA
+PC_AT  . . . . . . . . . . . . .  	L NEAR	0095	CODE
+PC_AT_N  . . . . . . . . . . . .  	L BYTE	000D	DATA
+PC_CONV  . . . . . . . . . . . .  	L NEAR	00B3	CODE
+PC_CONV_N  . . . . . . . . . . .  	L BYTE	004C	DATA
+PC_N . . . . . . . . . . . . . .  	L BYTE	0000	DATA
+PC_XT  . . . . . . . . . . . . .  	L NEAR	008F	CODE
+PC_XT_N  . . . . . . . . . . . .  	L BYTE	0005	DATA
+PRINT  . . . . . . . . . . . . .  	N PROC	0057	CODE	Length = 0005
+PS2_MODEL_30 . . . . . . . . . .  	L NEAR	009B	CODE
+PS2_MODEL_30_N . . . . . . . . .  	L BYTE	0012	DATA
+PS2_MODEL_50_OR_60 . . . . . . .  	L NEAR	00A1	CODE
+PS2_MODEL_50_OR_60_N . . . . . .  	L BYTE	0021	DATA
+PS2_MODEL_80 . . . . . . . . . .  	L NEAR	00A7	CODE
+PS2_MODEL_80_N . . . . . . . . .  	L BYTE	0036	DATA
+
+SERIAL_NUMBER  . . . . . . . . .  	L BYTE	0088	DATA
+
+TETR_TO_HEX  . . . . . . . . . .  	N PROC	0000	CODE	Length = 000B
+TYPE_PC  . . . . . . . . . . . .  	N PROC	005C	CODE	Length = 0067
+
+USER_NUMBER  . . . . . . . . . .  	L BYTE	009F	DATA
+
+Microsoft (R) Macro Assembler Version 5.10                  2/16/22 19:10:06
+                                                             Symbols-2
+
+
+VERSIONS . . . . . . . . . . . .  	L BYTE	0071	DATA
+
+WRD_TO_HEX . . . . . . . . . . .  	N PROC	001C	CODE	Length = 0018
+
+@CPU . . . . . . . . . . . . . .  	TEXT  0101h		
+@FILENAME  . . . . . . . . . . .  	TEXT  lab1_exe		
+@VERSION . . . . . . . . . . . .  	TEXT  510		
+
+
+    206 Source  Lines
+    206 Total   Lines
+     41 Symbols
+
+  47874 + 453242 Bytes symbol space free
+
+      0 Warning Errors
+      0 Severe  Errors
