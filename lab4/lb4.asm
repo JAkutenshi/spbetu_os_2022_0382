@@ -1,272 +1,272 @@
-; Шаблон текста программы на ассемблере для модуля типа .COM
+AStack SEGMENT STACK
+ DW 128 DUP(?)
+AStack ENDS
+
+DATA SEGMENT
+	NOT_LOAD db 'Interruption did not load', 0DH, 0AH, '$'
+	LOAD db 'Interruption was loaded', 0DH, 0AH, '$'
+	UNLOAD db 'Interruption was unloaded', 0DH, 0AH, '$'
+	ALREADY_LOAD db 'Interruption is already loaded', 0DH, 0AH, '$'
+DATA ENDS
+
 TESTPC SEGMENT
-    ASSUME CS:TESTPC, DS:TESTPC, ES:NOTHING, SS:NOTHING
-    ORG 100H
+	ASSUME CS:TESTPC, DS:DATA, SS:AStack
 
-START: JMP BEGIN
+;-----------------------------------
+; ПРОЦЕДУРЫ
+GET_CURS PROC near
 
-; ДАННЫЕ
-MEM_SIZE db 'MEM_SIZE:                  ',0DH,0AH,'$'
-EXTEND_MEM_SIZE db 'EXTEND_MEM_SIZE:                  ',0DH,0AH,'$'
-MCU db 'Memory control unit: adress-      ; type of part-      ; size of part-        ; SC or SD-              ',0DH,0AH,'$'
+	mov AH, 03h
+	mov BH, 0
+	int 10h
 
+	ret
+GET_CURS ENDP
+;-----------------------------------
+SET_CURS PROC near
 
-;ПРОЦЕДУРЫ
-;-----------------------------------------------------
+	mov AH, 02h
+	mov BH, 0
+	int 10h
 
-TETR_TO_HEX PROC near
-    and AL,0Fh
-    cmp AL,09
-    jbe NEXT
-    add AL,07
-NEXT: add AL,30h
-    ret
-TETR_TO_HEX ENDP
-;-------------------------------
+	ret
+SET_CURS ENDP
+;-----------------------------------
+PRINT PROC near
+	push AX
+	mov AH, 09h
+	int 21h
+	pop AX
+	ret
+PRINT ENDP
+;-----------------------------------
+MY_INT PROC far
+	jmp handle
+	counter db 'Interruptions count: 0000$' ;26 или 22
+	PSP dw 0
+	KEEP_IP dw 0
+	KEEP_CS dw 0
+	KEEP_SS dw 0
+	KEEP_SP dw 0
+	KEEP_AX dw 0
+	signature dw 9871h
+	IStack db 50 dup(" ")
+handle:
+	mov KEEP_AX, AX
+	mov AX, SS
+	mov KEEP_SS, AX
+	mov KEEP_SP, SP
+	mov AX, seg IStack
+	mov SS, AX
+	mov SP, offset handle
 
-BYTE_TO_HEX PROC near
-; байт в AL переводится в два символа шестн. числа в AX
-    push CX
-    mov AH,AL
-    call TETR_TO_HEX
-    xchg AL,AH
-    mov CL,4
-    shr AL,CL
-    call TETR_TO_HEX ;в AL старшая цифра
-    pop CX ;в AH младшая
-    ret
-BYTE_TO_HEX ENDP
-;-------------------------------
+	push CX
+	push DX
 
-WRD_TO_HEX PROC near
-;перевод в 16 с/с 16-ти разрядного числа
-; в AX - число, DI - адрес последнего символа
-    push BX
-    mov BH,AH
-    call BYTE_TO_HEX
-    mov [DI],AH
-    dec DI
-    mov [DI],AL
-    dec DI
-    mov AL,BH
-    call BYTE_TO_HEX
-    mov [DI],AH
-    dec DI
-    mov [DI],AL
-     pop BX
-     ret
-WRD_TO_HEX ENDP
-;--------------------------------------------------
+	call GET_CURS
+	push DX
 
-BYTE_TO_DEC PROC near
-; перевод в 10с/с, SI - адрес поля младшей цифры
-    push CX
-    push DX
-    xor AH,AH
-    xor DX,DX
-    mov CX,10
-loop_bd: div CX
-    or DL,30h
-    mov [SI],DL
-    dec SI
-    xor DX,DX
-    cmp AX,10
-    jae loop_bd
-    cmp AL,00h
-    je end_l
-    or AL,30h
-    mov [SI],AL
-end_l: pop DX
-    pop CX
-    ret
-BYTE_TO_DEC ENDP
-;-------------------------------
+	mov DH, 0
+	mov DL, 0
+	call SET_CURS
+	push SI
 
-WRD_TO_DEC PROC near
-; ax - paragraph, si - low digit of result
-    push bx
-    push dx
+	push CX
+	push DS
+	push BP
 
-    mov bx, 16
-    mul bx 
-    mov bx, 10
+	mov AX, seg counter
+	mov DS, AX
+	mov SI, offset counter
+	add SI, 21
+	mov CX, 4
 
-    convert:
-        div bx
-        add dl, '0'
-        mov [si], dl
-        dec si
-        xor dx, dx
-        cmp ax, 0000h
-        jne convert
+loop_int:
+	mov BP, CX
+	mov AH, [SI+BP]
+	inc AH
+	mov [SI+BP], AH
+	cmp AH, 3Ah
+	jne print_msg
+	mov AH, 30h
+	mov [SI+BP], AH
+	loop loop_int
+print_msg:
+	pop BP
+	pop DS
+	pop CX
+	pop SI
+	
+	push ES
+	push BP
 
-    pop dx
-    pop bx
-    ret
-WRD_TO_DEC ENDP
+	mov AX, seg counter
+	mov ES, AX
+	mov AX, offset counter
+	mov BP, AX
+	mov AH, 13h
+	mov AL, 0
+	mov CX, 26
+	mov BH, 0
+	int 10h
 
-print_st PROC near
-    mov AH, 09h
-    int 21h
-    ret
-print_st ENDP
+	pop BP
+	pop ES
+	
+	pop DX
+	call SET_CURS
+	
+	pop DX
+	pop CX
 
-print_symb PROC near
-    push ax
-    mov ah, 02h
-    int 21h
-    pop ax
-    ret
-print_symb ENDP
+	mov SP, KEEP_SP
+	mov AX, KEEP_SS
+	mov SS, AX
+	mov AX, KEEP_AX
+	mov AL, 20h
+	out 20h, AL
+	iret
+end_int:
+MY_INT ENDP
+;-----------------------------------
+MY_INT_LOAD PROC near
+	mov PSP, ES
+	mov AH, 35h
+	mov AL, 1Ch
+	int 21h
+	mov KEEP_IP, BX
+	mov KEEP_CS, ES
 
-PRINT_MEM_SIZE PROC near
-    push ax
-    push dx
-    push cx
-    push bx
-    push si
+	push DS
+	mov DX, offset MY_INT
+	mov AX, seg MY_INT
+	mov DS, AX
+	mov AH, 25h
+	mov AL, 1Ch
+	int 21h
+	pop DS
 
-    MOV AH,4AH
-    MOV BX,0FFFFH ; заведомо большая память
-    INT 21H
+	mov DX, offset end_int
+	mov CL, 4
+	shr DX, CL
+	inc DX
+	mov AX, CS
+	sub AX, PSP
+	add DX, AX
+	mov AL, 0
+	mov AH, 31h
+	int 21h
+	ret
+MY_INT_LOAD ENDP
+;-----------------------------------
+MY_INT_UNLOAD PROC near
+	CLI
+	push DS
+	mov AX, ES:[KEEP_CS]
+	mov DS, AX
+	mov DX, ES:[KEEP_IP]
+	mov AH, 25h
+	mov AL, 1Ch
+	int 21h
+	pop DS	
+	STI
 
-    mov si, offset MEM_SIZE
-    add si, 18
-    mov ax, bx
-    call WRD_TO_DEC
+	mov AX, ES:[PSP]
+	mov ES, AX
+	push ES
+	mov AX, ES:[2Ch]
+	mov ES, AX
+	mov AH, 49h
+	int 21h
+	pop ES
+	int 21h
+	ret
+MY_INT_UNLOAD ENDp
+;-----------------------------------
+IS_LOADED PROC near
+	push BX
+	push ES
+	mov AH, 35h
+	mov AL, 1Ch
+	int 21h
+	
+	mov AX, ES:[signature]
+	cmp AX, 9871h
+	je loaded
+	mov AL, 0h
+	jmp end_isloaded
+loaded:
+	mov AL, 01h
+end_isloaded:
+	pop ES
+	pop BX
+	ret
+IS_LOADED ENDP
+;-----------------------------------
+IS_FLAG PROC near
+	push BP
+	mov BP, 0082h
 
-    mov dx, offset MEM_SIZE
-    call print_st 
+	mov AL, ES:[BP]
+	cmp AL, '/'
+	jne not_good
 
-    pop si
-    pop bx
-    pop cx
-    pop dx
-    pop ax
-    ret
-PRINT_MEM_SIZE ENDP
+	mov AL, ES:[BP+1]
+	cmp AL, 'u'
+	jne not_good
 
-PRINT_EXTEND_MEM_SIZE PROC near
-    push ax
-    push dx
-    push cx
-    push bx
-    push si
+	mov AL, ES:[BP+2]
+	cmp AL, 'n'
+	jne not_good
 
-    mov AL,30h ; запись адреса ячейки CMOS
-    out 70h,AL
-    in AL,71h ; чтение младшего байта
-    mov BL,AL 
+	mov AL, 01h
+	jmp good
+not_good:
+	mov AL, 0h
+good:
+	pop BP
+	ret
+IS_FLAG endp
+;-----------------------------------
+MAIN PROC far
+	mov ax, data
+	mov ds, ax
+	
+	call IS_FLAG
+	mov BX, AX
+	
+	call IS_LOADED
+	cmp AL, 0h
+	je not_loaded
+	cmp BL, 0h
+	jne int_unload
+	mov DX, offset ALREADY_LOAD
+	call PRINT
+	jmp end_main
 
-    mov AL,31h ; запись адреса ячейки CMOS
-    out 70h,AL
-    in AL,71h 
-    mov BH,AL 
+not_loaded:
+	cmp BL, 0h
+	je int_load
+	mov DX, offset NOT_LOAD
+	call PRINT
+	jmp end_main
+int_load:
+	mov DX, offset LOAD
+	call PRINT
+	call MY_INT_LOAD
+	jmp end_main
+int_unload:
+	mov AH, 35h
+	mov AL, 1Ch
+	int 21h
+	mov DX, offset UNLOAD
+	call PRINT
+	call MY_INT_UNLOAD
 
-    mov si, offset EXTEND_MEM_SIZE
-    add si, 25
-    mov ax, bx
-    call WRD_TO_DEC
-
-    mov dx, offset EXTEND_MEM_SIZE
-    call print_st 
-
-    pop si
-    pop bx
-    pop cx
-    pop dx
-    pop ax
-    ret
-PRINT_EXTEND_MEM_SIZE ENDP
-
-PRINT_MCU PROC near
-    push ax
-    push dx
-    push cx
-    push bx
-    push si
-
-    mov di, offset MCU
-    add di, 33
-    mov ax, es
-    call WRD_TO_HEX
-
-    mov di, offset MCU
-    add di, 54
-    mov ax, es:[01h]
-    call WRD_TO_HEX
-
-    mov si, offset MCU
-    add si, 77
-    mov ax, es:[03h]
-    call WRD_TO_DEC
-
-    mov di, offset MCU
-    add di, 91
-    mov si, 8
-
-sc_sd:
-    mov bx, es:[si]
-	mov [di], bx
-    add si, 2
-	add di, 2
-    cmp si, 16
-	jb sc_sd
-
-    mov dx, offset MCU
-    call print_st 
-
-    pop si
-    pop bx
-    pop cx
-    pop dx
-    pop ax
-    ret
-PRINT_MCU ENDP
-
-PRINT_CHAIN_MCU PROC near
-    push ax
-    push dx
-    push cx
-    push bx
-    push si
-    push es
-
-    mov ah, 52h
-    int 21h
-    mov es, es:[bx-2]
-
-chain:
-    call PRINT_MCU
-    mov ah, es:[0]
-    cmp ah, 5Ah
-    je end_
-    mov ax, es
-    add ax, es:[3]
-    inc ax
-    mov es, ax
-    jmp chain
-
-end_:        
-    pop es
-    pop si
-    pop bx
-    pop cx
-    pop dx
-    pop ax
-    ret
-PRINT_CHAIN_MCU ENDP
-
-
-
-; КОД
-BEGIN:
-    call PRINT_MEM_SIZE
-    call PRINT_EXTEND_MEM_SIZE
-    call PRINT_CHAIN_MCU
-; Выход в DOS
-    xor AL,AL
-    mov AH,4Ch
-    int 21H
+end_main:
+	xor AL, AL
+	mov AH, 4Ch
+	int 21h
+MAIN ENDP
 TESTPC ENDS
-    END START ;конец модуля, START - точка входа
+END MAIN 
