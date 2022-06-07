@@ -5,7 +5,8 @@ START:	jmp BEGIN
 ;-------------------------------
 MEMORY_SIZE db 'Available memory:          ', 0DH, 0AH, '$'
 CMOS_SIZE db 'Extended memory:          ', 0DH, 0AH, '$'
-MCB db 'MCB:   | addr:      | owner PSP:     | size:        | SD/SC:                ', 0DH, 0AH, '$'
+MCB db 'MCB:   | addr:      | owner PSP:     | size:        | SD/SC:   $'
+ENDLINE db 0DH, 0AH, '$'
 ;-------------------------------
 TETR_TO_HEX PROC near
 	and AL, 0Fh
@@ -47,6 +48,28 @@ WRD_TO_HEX PROC near
 	pop BX
 	ret
 WRD_TO_HEX ENDP
+;---------------------------------------
+WRD_TO_DEC PROC near
+	push CX
+	push DX
+	mov CX, 10
+loop_wd: 
+	div CX
+	or DL, 30h
+	mov [SI], DL
+	dec SI
+	xor DX, DX
+	cmp AX, 10
+	jae loop_wd
+	cmp AL, 00h
+	je end_2
+	or AL, 30h
+	mov [SI], AL
+end_2:  
+	pop DX
+	pop CX
+	ret
+WRD_TO_DEC ENDP
 ;---------------------------------------
 BYTE_TO_DEC PROC near
 ; перевод в 10 с/с, в SI - адрес поля младшей цифры
@@ -138,87 +161,65 @@ cmos_func PROC near
 	ret
 cmos_func ENDP
 ;-----------------------------------
-mcb_func PROC near
-	push ax
-	push bx
-	push cx
-	push es
-	
+mcb_func PROC near	
     	mov ah, 52h
     	int 21h
     	mov ax, es:[bx-2]
     	mov es, ax
-    	mov cl, 1
     	
     	check_mcb:
-	    	push ax
-		push bx
-		push dx
-		push cx
-	    	push si
-	    	push di
-
-		mov al, cl
-		mov si, offset MCB
-		add si, 5
-		call BYTE_TO_DEC
+		mov di, offset MCB
+		add di, 5
+		mov ax, es:[00h]
+		call BYTE_TO_HEX
+		mov [di], al
+		add di, 1
+		mov [di], ah
 		    
-		mov ax, es
 		mov di, offset MCB
 		add di, 18
+		mov ax, es
 		call WRD_TO_HEX
 		    
-		mov ax, es:[1]
 		mov di, offset MCB
 		add di, 34
+		mov ax, es:[01h]
 		call WRD_TO_HEX
 
-		mov ax, es:[3]
 		mov si, offset MCB
 		add si, 49
-		push es
-		mov dx, ds
-		mov es, dx
-		call BYTE_FUNC
-		pop es
-
-		mov bx, 8
-		mov cx, 7
-		mov si, offset MCB
-		add si, 61
-		scsd_loop:
-		    mov dx, es:[bx]
-		    mov ds:[si], dx
-		    inc bx
-		    inc si
-		    loop scsd_loop
-
+		mov ax, es:[03h]
+		mov bx, 16
+		mul bx
+		call WRD_TO_DEC
+		
 		mov dx, offset MCB
 		call PRINT
 		
-		pop di
-		pop si
-		pop cx
-		pop dx
-	    	pop bx
-	    	pop ax
-	    	
-	    	mov al, es:[0]
-    		cmp al, 5ah
-    		je final
-    
-    		mov bx, es:[3]
-    		mov ax, es
+		mov di, offset MCB
+		add di, 62
+		mov bx, 8
+		mov cx, 7
+		scsd_loop:
+		    mov dl, es:[bx]
+		    mov ah, 02h
+		    int 21h
+		    add bx, 1
+		    loop scsd_loop
+		    
+		mov al, es:[0h]
+		cmp al, 5ah
+		je final
+	    	 
+    		mov bx, es
+    		mov ax, es:[03h]
     		add ax, bx
     		inc ax
     		mov es, ax
-    		inc cl
+    		mov dx, offset ENDLINE
+    		call PRINT
     		jmp check_mcb
 	final:
-		push es
-		push cx
-		push bx
-		push ax
 		ret
 mcb_func ENDP
 ;-----------------------------------
