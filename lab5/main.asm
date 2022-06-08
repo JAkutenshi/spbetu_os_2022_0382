@@ -14,17 +14,19 @@ CODE SEGMENT
 	
 	INTERRUPT PROC FAR
 		jmp int_start
-		PSP DW ?
-		KEEP_IP DW ?
-		KEEP_CS DW ?
-		KEEP_SS DW ?
-		KEEP_SP DW ?
-		KEEP_AX DW ?
-		SYMBOL DW ?
+		SYMBOL DB 0
 		INT_ID DW 1f17h
+		KEEP_IP DW 0
+		KEEP_CS DW 0
+		PSP DW 0
+		KEEP_AX DW 0
+		KEEP_SS DW 0
+		KEEP_SP DW 0
+
 		INT_STACK DB 128 dup(?)
 		
 		int_start:
+			mov KEEP_AX, AX
 			mov KEEP_SS, SS
         		mov KEEP_SP, SP
         		mov SP, SEG INTERRUPT
@@ -161,33 +163,42 @@ CODE SEGMENT
 	LOAD_INT ENDP
 	
 	UNLOAD_INT PROC NEAR
+		cli
 		push AX
 		push BX
 		push DX
 		push DS
 		push ES
+		push SI
 		
-		cli
 		mov AH, 35h
 		mov AL, 1Ch
 		int 21h
-		mov DX, ES:[offset KEEP_IP]
-		mov AX, ES:[offset KEEP_CS]
+		mov SI, OFFSET KEEP_IP
+		sub SI, OFFSET INTERRUPT
+		mov DX, ES:[BX+SI]
+		mov AX, ES:[BX+SI+2]
+		
+		push DS
 		mov DS, AX
 		mov AH, 25h
 		mov AL, 1Ch
 		int 21h
+		pop DS
 		
-		mov AX, ES:[offset PSP]
+		mov AX, ES:[BX+SI+4]
 		mov ES, AX
-		mov DX, ES:[2Ch]
+		push ES
+		mov AX, ES:[2Ch]
+		mov ES, AX
 		mov AH, 49h
 		int 21h
-		mov ES, DX
+		pop ES
 		mov AH, 49h
 		int 21h
 		sti
 		
+		pop SI
 		pop ES
 		pop DS
 		pop DX
@@ -227,6 +238,7 @@ CODE SEGMENT
 	main PROC FAR
 		push DS
 		xor AX, AX
+		push AX
 		mov AX, DATA
         	mov DS, AX
 		
@@ -259,8 +271,8 @@ CODE SEGMENT
 			call PRINT
 
 		exit:    
-			pop DS
-			mov AX, 4Ch
+			xor AL, AL
+			mov AH, 4Ch
 			int 21h
 	main ENDP
 CODE ENDS
