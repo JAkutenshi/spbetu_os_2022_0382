@@ -1,0 +1,290 @@
+Turbo Assembler	 Version 3.1	    02/16/22 19:43:54	    Page 1
+lab1_com.asm
+
+
+
+      1				      ;	Шаблон текста программы на ассемблере для модуля  +
+      2				     типа .COM
+      3	0000			     TESTPC SEGMENT
+      4				      ASSUME CS:TESTPC,	DS:TESTPC, ES:NOTHING, SS:NOTHING
+      5				      ORG 100H
+      6	0100  E9 01C9		     START: JMP	BEGIN
+      7	0103  50 43 0D 0A 24	     PC_n db "PC",0Dh,0Ah,'$'
+      8	0108  50 43 2F 58 54 0D	0A+  PC_XT_n db	"PC/XT",0Dh,0Ah,'$'
+      9	      24
+     10	0110  41 54 0D 0A 24	     PC_AT_n db	"AT",0Dh,0Ah,'$'
+     11	0115  50 53 32 20 6D 6F	64+  PS2_model_30_n db "PS2 model 30",0Dh,0Ah,'$'
+     12	      65 6C 20 33 30 0D	0A+
+     13	      24
+     14	0124  50 53 32 20 6D 6F	64+  PS2_model_50_or_60_n db "PS2 model	50 or 60",0Dh,0Ah,'$'
+     15	      65 6C 20 35 30 20	6F+
+     16	      72 20 36 30 0D 0A	24
+     17	0139  50 53 32 20 6D 6F	64+  PS2_model_80_n db "PS2 model 80",0Dh,0Ah,'$'
+     18	      65 6C 20 38 30 0D	0A+
+     19	      24
+     20	0148  50 43 6A 72 0D 0A	24   PCjr_n db "PCjr",0Dh,0Ah,'$'
+     21	014F  50 43 20 43 6F 6E	76+  PC_conv_n db "PC Convertible",0Dh,0Ah,'$'
+     22	      65 72 74 69 62 6C	65+
+     23	      0D 0A 24
+     24	0160  4E 6F 6E 65 20 63	6F+  def_n db "None coincidences",0Dh,0Ah,'$'
+     25	      69 6E 63 69 64 65	6E+
+     26	      63 65 73 0D 0A 24
+     27
+     28	0174  56 65 72 73 69 6F	6E+  VERSIONS db 'Version MS-DOS:  .  ',0DH,0AH,'$'
+     29	      20 4D 53 2D 44 4F	53+
+     30	      3A 20 20 2E 20 20	0D+
+     31	      0A 24
+     32	018B  53 65 72 69 61 6C	20+  SERIAL_NUMBER db  'Serial number OEM:  ',0DH,0AH,'$'
+     33	      6E 75 6D 62 65 72	20+
+     34	      4F 45 4D 3A 20 20	0D+
+     35	      0A 24
+     36	01A2  55 73 65 72 20 73	65+  USER_NUMBER db  'User serial number:	H $'
+     37	      72 69 61 6C 20 6E	75+
+     38	      6D 62 65 72 3A 20	20+
+     39	      20 20 20 20 20 48	20+
+     40	      24
+     41				     ;ПРОЦЕДУРЫ
+     42				     ;-----------------------------------------------------
+     43	01BF			     TETR_TO_HEX PROC near
+     44	01BF  24 0F		      and AL,0Fh
+     45	01C1  3C 09		      cmp AL,09
+     46	01C3  76 02		      jbe NEXT
+     47	01C5  04 07		      add AL,07
+     48	01C7  04 30		     NEXT: add AL,30h
+     49	01C9  C3		      ret
+     50	01CA			     TETR_TO_HEX ENDP
+     51				     ;-------------------------------
+     52	01CA			     BYTE_TO_HEX PROC near
+     53				     ; байт	в AL переводится в	два символа шестн. числа в	AX
+     54	01CA  51		      push CX
+     55	01CB  8A E0		      mov AH,AL
+     56	01CD  E8 FFEF		      call TETR_TO_HEX
+     57	01D0  86 C4		      xchg AL,AH
+Turbo Assembler	 Version 3.1	    02/16/22 19:43:54	    Page 2
+lab1_com.asm
+
+
+
+     58	01D2  B1 04		      mov CL,4
+     59	01D4  D2 E8		      shr AL,CL
+     60	01D6  E8 FFE6		      call TETR_TO_HEX ;в AL старшая цифра
+     61	01D9  59		      pop CX ;в AH младшая
+     62	01DA  C3		      ret
+     63	01DB			     BYTE_TO_HEX ENDP
+     64				     ;-------------------------------
+     65	01DB			     WRD_TO_HEX	PROC near
+     66				     ;перевод в	16 с/с 16-ти разрядного числа
+     67				     ; в AX - число, DI -	адрес последнего	символа
+     68	01DB  53		      push BX
+     69	01DC  8A FC		      mov BH,AH
+     70	01DE  E8 FFE9		      call BYTE_TO_HEX
+     71	01E1  88 25		      mov [DI],AH
+     72	01E3  4F		      dec DI
+     73	01E4  88 05		      mov [DI],AL
+     74	01E6  4F		      dec DI
+     75	01E7  8A C7		      mov AL,BH
+     76	01E9  E8 FFDE		      call BYTE_TO_HEX
+     77	01EC  88 25		      mov [DI],AH
+     78	01EE  4F		      dec DI
+     79	01EF  88 05		      mov [DI],AL
+     80	01F1  5B		      pop BX
+     81	01F2  C3		      ret
+     82	01F3			     WRD_TO_HEX	ENDP
+     83				     ;--------------------------------------------------
+     84	01F3			     BYTE_TO_DEC PROC near
+     85				     ; перевод в 10с/с, SI - адрес поля младшей цифры
+     86	01F3  51		      push CX
+     87	01F4  52		      push DX
+     88	01F5  32 E4		      xor AH,AH
+     89	01F7  33 D2		      xor DX,DX
+     90	01F9  B9 000A		      mov CX,10
+     91	01FC  F7 F1		     loop_bd: div CX
+     92	01FE  80 CA 30		      or DL,30h
+     93	0201  88 14		      mov [SI],DL
+     94	0203  4E		      dec SI
+     95	0204  33 D2		      xor DX,DX
+     96	0206  3D 000A		      cmp AX,10
+     97	0209  73 F1		      jae loop_bd
+     98	020B  3C 00		      cmp AL,00h
+     99	020D  74 04		      je end_l
+    100	020F  0C 30		      or AL,30h
+    101	0211  88 04		      mov [SI],AL
+    102	0213  5A		     end_l: pop	DX
+    103	0214  59		      pop CX
+    104	0215  C3		      ret
+    105	0216			     BYTE_TO_DEC ENDP
+    106				     ;-------------------------------
+    107				     ; КОД
+    108
+    109	0216			     PRINT proc	near
+    110	0216  B4 09		     mov AH,09h
+    111	0218  CD 21		     INT 21h
+    112	021A  C3		     ret
+    113	021B			     PRINT endp
+    114
+Turbo Assembler	 Version 3.1	    02/16/22 19:43:54	    Page 3
+lab1_com.asm
+
+
+
+    115	021B			     type_PC proc near
+    116	021B  B8 F000		      mov ax, 0f000h
+    117	021E  8E C0		      mov es, ax
+    118	0220  26: A0 FFFE	      mov al, es:[0fffeh]
+    119	0224  3C F8		      cmp al, 0F8h
+    120	0226  72 50		      jb define
+    121	0228  3C FF		      cmp al,0FFh
+    122	022A  73 1C		      jae pc
+    123	022C  3C FE		      cmp al, 0FEh
+    124	022E  73 1E		      jae pc_xt
+    125	0230  3C FD		      cmp al, 0FDh
+    126	0232  73 38		      jae pcjr
+    127	0234  3C FC		      cmp al, 0FCh
+    128	0236  73 28		      jae ps2_model_50_or_60
+    129	0238  3C FB		      cmp al, 0FBh
+    130	023A  73 12		      jae pc_xt
+    131	023C  3C FA		      cmp al, 0FAh
+    132	023E  73 1A		      jae ps2_model_30
+    133	0240  3C F9		      cmp al, 0F9h
+    134	0242  73 2E		      jae pc_conv
+    135	0244  3C F8		      cmp al, 0F8h
+    136	0246  73 1E		      jae ps2_model_80
+    137	0248			      pc:
+    138	0248  BA 0103r		       mov dx,offset PC_n
+    139	024B  EB 31 90		       jmp call_print
+    140	024E			      pc_xt:
+    141	024E  BA 0108r		       mov dx,offset PC_XT_n
+    142	0251  EB 2B 90		       jmp call_print
+    143	0254			      pc_at:
+    144	0254  BA 0110r		       mov dx,offset PC_AT_n
+    145	0257  EB 25 90		       jmp call_print
+    146	025A			      ps2_model_30:
+    147	025A  BA 0115r		       mov dx,offset PS2_model_30_n
+    148	025D  EB 1F 90		       jmp call_print
+    149	0260			      ps2_model_50_or_60:
+    150	0260  BA 0124r		       mov dx,offset PS2_model_50_or_60_n
+    151	0263  EB 19 90		       jmp call_print
+    152	0266			      ps2_model_80:
+    153	0266  BA 0139r		       mov dx,offset PS2_model_80_n
+    154	0269  EB 13 90		       jmp call_print
+    155	026C			      pcjr:
+    156	026C  BA 0148r		       mov dx,offset PCjr_n
+    157	026F  EB 0D 90		       jmp call_print
+    158	0272			      pc_conv:
+    159	0272  BA 014Fr		       mov dx,offset PC_conv_n
+    160	0275  EB 07 90		       jmp call_print
+    161	0278			      define:
+    162	0278  BA 0160r		       mov dx,offset def_n
+    163	027B  EB 01 90		       jmp call_print
+    164	027E			      call_print:
+    165	027E  E8 FF95		       call PRINT
+    166	0281  C3		      ret
+    167	0282			      type_PC endp
+    168
+    169
+    170	0282			     ms_version	PROC near
+    171	0282  B4 30		      mov ah, 30h
+Turbo Assembler	 Version 3.1	    02/16/22 19:43:54	    Page 4
+lab1_com.asm
+
+
+
+    172	0284  CD 21		      int 21h
+    173	0286  50		      push ax
+    174
+    175	0287  BE 0174r		      mov si, offset VERSIONS
+    176	028A  83 C6 10		      add si, 16
+    177	028D  E8 FF63		      call BYTE_TO_DEC
+    178	0290  58		      pop ax
+    179	0291  8A C4		      mov al, ah
+    180	0293  83 C6 03		      add si, 3
+    181	0296  E8 FF5A		      call BYTE_TO_DEC
+    182	0299  BA 0174r		      mov dx, offset VERSIONS
+    183	029C  E8 FF77		      call PRINT
+    184
+    185	029F  BE 018Br		      mov si, offset SERIAL_NUMBER
+    186	02A2  83 C6 13		      add si, 19
+    187	02A5  8A C7		      mov al, bh
+    188	02A7  E8 FF49		      call BYTE_TO_DEC
+    189	02AA  BA 018Br		      mov dx, offset SERIAL_NUMBER
+    190	02AD  E8 FF66		      call PRINT
+    191
+    192	02B0  BF 01A2r		      mov di, offset USER_NUMBER
+    193	02B3  83 C7 19		      add di, 25
+    194	02B6  8B C1		      mov ax, cx
+    195	02B8  E8 FF20		      call WRD_TO_HEX
+    196	02BB  8A C3		      mov al, bl
+    197	02BD  E8 FF0A		      call BYTE_TO_HEX
+    198	02C0  83 EF 02		      sub di, 2
+    199	02C3  89 05		      mov [di],	ax
+    200	02C5  BA 01A2r		      mov dx, offset USER_NUMBER
+    201	02C8  E8 FF4B		      call PRINT
+    202	02CB  C3		      ret
+    203	02CC			     ms_version	endp
+    204
+    205	02CC			     BEGIN:
+    206				     ; Вывод строки текста из поля STRING
+    207	02CC  E8 FF4C		      call type_PC
+    208	02CF  E8 FFB0		      call ms_version
+    209
+    210				     ; Выход в DOS
+    211	02D2  32 C0		      xor AL,AL
+    212	02D4  B4 4C		      mov AH,4Ch
+    213	02D6  CD 21		      int 21H
+    214	02D8			      TESTPC ENDS
+    215				      END START	;конец модуля, START	- точка входа
+Turbo Assembler	 Version 3.1	    02/16/22 19:43:54	    Page 5
+Symbol Table
+
+
+
+
+Symbol Name		Type   Value			   Cref	(defined at #)
+
+??DATE			Text   "02/16/22"
+??FILENAME		Text   "lab1_com"
+??TIME			Text   "19:43:54"
+??VERSION		Number 030A
+@CPU			Text   0101H
+@CURSEG			Text   TESTPC			   #3
+@FILENAME		Text   LAB1_COM
+@WORDSIZE		Text   2			   #3
+BEGIN			Near   TESTPC:02CC		   6  #205
+BYTE_TO_DEC		Near   TESTPC:01F3		   #84	177  181  188
+BYTE_TO_HEX		Near   TESTPC:01CA		   #52	70  76	197
+CALL_PRINT		Near   TESTPC:027E		   139	142  145  148  151  154	 157  160  163	#164
+DEFINE			Near   TESTPC:0278		   120	#161
+DEF_N			Byte   TESTPC:0160		   #24	162
+END_L			Near   TESTPC:0213		   99  #102
+LOOP_BD			Near   TESTPC:01FC		   #91	97
+MS_VERSION		Near   TESTPC:0282		   #170	 208
+NEXT			Near   TESTPC:01C7		   46  #48
+PC			Near   TESTPC:0248		   122	#137
+PCJR			Near   TESTPC:026C		   126	#155
+PCJR_N			Byte   TESTPC:0148		   #20	156
+PC_AT			Near   TESTPC:0254		   #143
+PC_AT_N			Byte   TESTPC:0110		   #10	144
+PC_CONV			Near   TESTPC:0272		   134	#158
+PC_CONV_N		Byte   TESTPC:014F		   #21	159
+PC_N			Byte   TESTPC:0103		   #7  138
+PC_XT			Near   TESTPC:024E		   124	130  #140
+PC_XT_N			Byte   TESTPC:0108		   #8  141
+PRINT			Near   TESTPC:0216		   #109	 165  183  190	201
+PS2_MODEL_30		Near   TESTPC:025A		   132	#146
+PS2_MODEL_30_N		Byte   TESTPC:0115		   #11	147
+PS2_MODEL_50_OR_60	Near   TESTPC:0260		   128	#149
+PS2_MODEL_50_OR_60_N	Byte   TESTPC:0124		   #14	150
+PS2_MODEL_80		Near   TESTPC:0266		   136	#152
+PS2_MODEL_80_N		Byte   TESTPC:0139		   #17	153
+SERIAL_NUMBER		Byte   TESTPC:018B		   #32	185  189
+START			Near   TESTPC:0100		   #6  215
+TETR_TO_HEX		Near   TESTPC:01BF		   #43	56  60
+TYPE_PC			Near   TESTPC:021B		   #115	 207
+USER_NUMBER		Byte   TESTPC:01A2		   #36	192  200
+VERSIONS		Byte   TESTPC:0174		   #28	175  182
+WRD_TO_HEX		Near   TESTPC:01DB		   #65	195
+
+Groups & Segments	Bit Size Align	Combine	Class	   Cref	(defined at #)
+
+TESTPC			16  02D8 Para	none		   #3  4  4
+

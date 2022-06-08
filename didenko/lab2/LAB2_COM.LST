@@ -1,0 +1,307 @@
+Turbo Assembler	 Version 3.1	    02/19/22 00:42:06	    Page 1
+lab2_com.ASM
+
+
+
+      1	0000			     main_segment SEGMENT
+      2				      ASSUME CS:main_segment, DS:main_segment, ES:NOTHING, SS:NOTHING
+      3				      ORG 100H
+      4	0100			     START:
+      5	0100  E9 0223		      JMP BEGIN
+      6
+      7				      ;---------------------Данные--------------------------
+      8	0103			     DATA:
+      9	0103  53 65 67 6D 65 6E	74+   seg_adr_first db "Segment	address	of first byte inaccessible memory:     h",0Dh,0Ah,'$'
+     10	      20 61 64 64 72 65	73+
+     11	      73 20 6F 66 20 66	69+
+     12	      72 73 74 20 62 79	74+
+     13	      65 20 69 6E 61 63	63+
+     14	      65 73 73 69 62 6C	65+
+     15	      20 6D 65 6D 6F 72	79+
+     16	      3A 20 20 20 20 20	68+
+     17	      0D 0A 24
+     18	013E  53 65 67 6D 65 6E	74+   seg_adr_env db "Segment address of the medium being transferred program:	   h",0Dh,0Ah,'$'
+     19	      20 61 64 64 72 65	73+
+     20	      73 20 6F 66 20 74	68+
+     21	      65 20 6D 65 64 69	75+
+     22	      6D 20 62 65 69 6E	67+
+     23	      20 74 72 61 6E 73	66+
+     24	      65 72 72 65 64 20	70+
+     25	      72 6F 67 72 61 6D	3A+
+     26	      20 20 20 20 20 68	0D+
+     27	      0A 24
+     28	017F  54 61 69 6C 20 63	6F+   tail_com_str db "Tail command string:							    +
+     29	      6D 6D 61 6E 64 20	73+  ",0Dh,0Ah,'$'
+     30	      74 72 69 6E 67 3A	20+
+     31	      20 20 20 20 20 20	20+
+     32	      20 20 20 20 20 20	20+
+     33	      20 20 20 20 20 20	20+
+     34	      20 20 20 20 20 20	20+
+     35	      20 20 20 20 20 20	20+
+     36	      20 20 20 20 20 20	20+
+     37	      20 20 20 20 20 20	20+
+     38	      20 20 20 20 20 20	20+
+     39	      20 20 20 20 20 20	20+
+     40	      20 20 20 20 20 20	0D+
+     41	      0A 24
+     42	01DC  45 6E 76 69 72 6F	6E+   env_area_con db "Environment area	content:  ",'$'
+     43	      6D 65 6E 74 20 61	72+
+     44	      65 61 20 63 6F 6E	74+
+     45	      65 6E 74 3A 20 20	24
+     46	01F8  4C 6F 61 64 61 62	6C+   path db "Loadable	module path:  ",'$'
+     47	      65 20 6D 6F 64 75	6C+
+     48	      65 20 70 61 74 68	3A+
+     49	      20 20 24
+     50	0210  49 6E 20 43 6F 6D	6D+   NULL_TAIL	db "In Command tail no sybmols",0Dh,0Ah,'$'
+     51	      61 6E 64 20 74 61	69+
+     52	      6C 20 6E 6F 20 73	79+
+     53	      62 6D 6F 6C 73 0D	0A+
+     54	      24
+     55	022D  0D 0A 24		      END_STRING db 0Dh,0Ah,'$'
+     56
+     57				      ;ПРОЦЕДУРЫ
+Turbo Assembler	 Version 3.1	    02/19/22 00:42:06	    Page 2
+lab2_com.ASM
+
+
+
+     58				      ;-----------------------------------------------------
+     59	0230			     TETR_TO_HEX PROC near
+     60	0230  24 0F		      and AL,0Fh
+     61	0232  3C 09		      cmp AL,09
+     62	0234  76 02		      jbe NEXT
+     63	0236  04 07		      add AL,07
+     64	0238  04 30		     NEXT: add AL,30h
+     65	023A  C3		      ret
+     66	023B			     TETR_TO_HEX ENDP
+     67				     ;-------------------------------
+     68	023B			     BYTE_TO_HEX PROC near
+     69				     ; байт	в AL переводится в	два символа шестн. числа в	AX
+     70	023B  51		      push CX
+     71	023C  8A E0		      mov AH,AL
+     72	023E  E8 FFEF		      call TETR_TO_HEX
+     73	0241  86 C4		      xchg AL,AH
+     74	0243  B1 04		      mov CL,4
+     75	0245  D2 E8		      shr AL,CL
+     76	0247  E8 FFE6		      call TETR_TO_HEX ;в AL старшая цифра
+     77	024A  59		      pop CX ;в AH младшая
+     78	024B  C3		      ret
+     79	024C			     BYTE_TO_HEX ENDP
+     80				     ;-------------------------------
+     81	024C			     WRD_TO_HEX	PROC near
+     82				     ;перевод в	16 с/с 16-ти разрядного числа
+     83				     ; в AX - число, DI -	адрес последнего	символа
+     84	024C  53		      push BX
+     85	024D  8A FC		      mov BH,AH
+     86	024F  E8 FFE9		      call BYTE_TO_HEX
+     87	0252  88 25		      mov [DI],AH
+     88	0254  4F		      dec DI
+     89	0255  88 05		      mov [DI],AL
+     90	0257  4F		      dec DI
+     91	0258  8A C7		      mov AL,BH
+     92	025A  E8 FFDE		      call BYTE_TO_HEX
+     93	025D  88 25		      mov [DI],AH
+     94	025F  4F		      dec DI
+     95	0260  88 05		      mov [DI],AL
+     96	0262  5B		      pop BX
+     97	0263  C3		      ret
+     98	0264			     WRD_TO_HEX	ENDP
+     99				     ;--------------------------------------------------
+    100	0264			     BYTE_TO_DEC PROC near
+    101				     ; перевод в 10с/с, SI - адрес поля младшей цифры
+    102	0264  51		      push CX
+    103	0265  52		      push DX
+    104	0266  32 E4		      xor AH,AH
+    105	0268  33 D2		      xor DX,DX
+    106	026A  B9 000A		      mov CX,10
+    107	026D  F7 F1		     loop_bd: div CX
+    108	026F  80 CA 30		      or DL,30h
+    109	0272  88 14		      mov [SI],DL
+    110	0274  4E		      dec SI
+    111	0275  33 D2		      xor DX,DX
+    112	0277  3D 000A		      cmp AX,10
+    113	027A  73 F1		      jae loop_bd
+    114	027C  3C 00		      cmp AL,00h
+Turbo Assembler	 Version 3.1	    02/19/22 00:42:06	    Page 3
+lab2_com.ASM
+
+
+
+    115	027E  74 04		      je end_l
+    116	0280  0C 30		      or AL,30h
+    117	0282  88 04		      mov [SI],AL
+    118	0284  5A		     end_l: pop	DX
+    119	0285  59		      pop CX
+    120	0286  C3		      ret
+    121	0287			     BYTE_TO_DEC ENDP
+    122				     ;-------------------------------
+    123				     ; КОД
+    124
+    125	0287			     PRINT proc	near
+    126	0287  B4 09		     mov AH,09h
+    127	0289  CD 21		     INT 21h
+    128	028B  C3		     ret
+    129	028C			     PRINT endp
+    130
+    131	028C			     PRINT_SEG_ADR_FIRST proc near
+    132	028C  BF 0139r		      mov di, offset seg_adr_first + 54
+    133	028F  A1 0002		      mov ax, ds:[2h]
+    134	0292  E8 FFB7		      call WRD_TO_HEX
+    135	0295  BA 0103r		      mov dx, offset seg_adr_first
+    136	0298  E8 FFEC		      call PRINT
+    137	029B  C3		      ret
+    138	029C			      PRINT_SEG_ADR_FIRST endp
+    139
+    140	029C			     PRINT_SWG_ADR_ENV proc near
+    141	029C  A1 002C		      mov ax, ds:[2Ch]
+    142	029F  BF 017Ar		      mov di, OFFSET seg_adr_env + 60
+    143	02A2  E8 FFA7		      call WRD_TO_HEX
+    144	02A5  BA 013Er		      mov dx, offset seg_adr_env
+    145	02A8  E8 FFDC		      call PRINT
+    146	02AB  C3		      ret
+    147	02AC			      PRINT_SWG_ADR_ENV	endp
+    148
+    149	02AC			     PRINT_TAIL_COM_STR	PROC near
+    150	02AC  8A 0E 0080	      mov cl, ds:[80h]
+    151	02B0  BE 017Fr		      mov si, offset tail_com_str
+    152	02B3  83 C6 15		      add si, 21
+    153	02B6  80 F9 00		      cmp cl, 0h
+    154	02B9  74 12		      je empty_tail
+    155	02BB  33 FF		      xor di, di
+    156	02BD			     readtail:
+    157	02BD  8A 85 0081	      mov al, ds:[81h+di]
+    158	02C1  47		      inc di
+    159	02C2  88 04		      mov [si],	al
+    160	02C4  46		      inc si
+    161	02C5  E2 F6		      loop readtail
+    162	02C7  BA 017Fr		      mov dx, offset tail_com_str
+    163	02CA  EB 04 90		      jmp end_tail
+    164	02CD			     empty_tail:
+    165	02CD  BA 0210r				     mov dx, offset NULL_TAIL
+    166	02D0			     end_tail:
+    167	02D0  E8 FFB4			call PRINT
+    168	02D3  C3			ret
+    169	02D4			     PRINT_TAIL_COM_STR	ENDP
+    170
+    171
+Turbo Assembler	 Version 3.1	    02/19/22 00:42:06	    Page 4
+lab2_com.ASM
+
+
+
+    172	02D4			     PRINT_CONTENT PROC	near
+    173	02D4  BA 01DCr			mov dx,	offset env_area_con
+    174	02D7  E8 FFAD			call PRINT
+    175	02DA  33 FF			xor di,di
+    176	02DC  8E 1E 002C		mov ds,	ds:[2Ch]
+    177	02E0			     read_string:
+    178	02E0  80 3D 00			     cmp byte ptr [di],	00h
+    179	02E3  74 09			     jz	end_str
+    180	02E5  8A 15			     mov dl, [di]
+    181	02E7  B4 02			     mov ah, 02h
+    182	02E9  CD 21			     int 21h
+    183	02EB  EB 13 90			     jmp find_end
+    184	02EE			     end_str:
+    185	02EE  80 7D 01 00		cmp byte ptr [di+1],00h
+    186	02F2  74 0C			jz find_end
+    187	02F4  1E			push ds
+    188	02F5  8C C9			mov cx,	cs
+    189	02F7  8E D9			     mov ds, cx
+    190	02F9  BA 022Dr			     mov dx, offset END_STRING
+    191	02FC  E8 FF88			     call PRINT
+    192	02FF  1F			     pop ds
+    193	0300			     find_end:
+    194	0300  47			     inc di
+    195	0301  83 3D 01			     cmp word ptr [di],	0001h
+    196	0304  74 02			     jz	read_path
+    197	0306  EB D8			     jmp read_string
+    198	0308			     read_path:
+    199	0308  1E			     push ds
+    200	0309  8C C8			     mov ax, cs
+    201	030B  8E D8			     mov ds, ax
+    202	030D  BA 01F8r			     mov dx, offset path
+    203	0310  E8 FF74			     call PRINT
+    204	0313  1F			     pop ds
+    205	0314  83 C7 02			     add di, 2
+    206	0317			     loop_path:
+    207	0317  80 3D 00			     cmp byte ptr [di],	00h
+    208	031A  74 09			     jz	complete
+    209	031C  8A 15			     mov dl, [di]
+    210	031E  B4 02			     mov ah, 02h
+    211	0320  CD 21			     int 21h
+    212	0322  47			     inc di
+    213	0323  EB F2			     jmp loop_path
+    214	0325			     complete:
+    215	0325  C3			     ret
+    216	0326			     PRINT_CONTENT ENDP
+    217
+    218	0326			     BEGIN:
+    219	0326  E8 FF63		      call PRINT_SEG_ADR_FIRST
+    220	0329  E8 FF70		      call PRINT_SWG_ADR_ENV
+    221	032C  E8 FF7D		      call PRINT_TAIL_COM_STR
+    222	032F  E8 FFA2		      call PRINT_CONTENT
+    223
+    224
+    225				     ; Выход в DOS
+    226	0332  32 C0		      xor AL,AL
+    227	0334  B4 4C		      mov AH,4Ch
+    228	0336  CD 21		      int 21H
+Turbo Assembler	 Version 3.1	    02/19/22 00:42:06	    Page 5
+lab2_com.ASM
+
+
+
+    229	0338			      main_segment ENDS
+    230				      END START	;конец модуля, START	- точка входа
+Turbo Assembler	 Version 3.1	    02/19/22 00:42:06	    Page 6
+Symbol Table
+
+
+
+
+Symbol Name		Type   Value			   Cref	(defined at #)
+
+??DATE			Text   "02/19/22"
+??FILENAME		Text   "lab2_com"
+??TIME			Text   "00:42:06"
+??VERSION		Number 030A
+@CPU			Text   0101H
+@CURSEG			Text   MAIN_SEGMENT		   #1
+@FILENAME		Text   LAB2_COM
+@WORDSIZE		Text   2			   #1
+BEGIN			Near   MAIN_SEGMENT:0326	   5  #218
+BYTE_TO_DEC		Near   MAIN_SEGMENT:0264	   #100
+BYTE_TO_HEX		Near   MAIN_SEGMENT:023B	   #68	86  92
+COMPLETE		Near   MAIN_SEGMENT:0325	   208	#214
+DATA			Near   MAIN_SEGMENT:0103	   #8
+EMPTY_TAIL		Near   MAIN_SEGMENT:02CD	   154	#164
+END_L			Near   MAIN_SEGMENT:0284	   115	#118
+END_STR			Near   MAIN_SEGMENT:02EE	   179	#184
+END_STRING		Byte   MAIN_SEGMENT:022D	   #55	190
+END_TAIL		Near   MAIN_SEGMENT:02D0	   163	#166
+ENV_AREA_CON		Byte   MAIN_SEGMENT:01DC	   #42	173
+FIND_END		Near   MAIN_SEGMENT:0300	   183	186  #193
+LOOP_BD			Near   MAIN_SEGMENT:026D	   #107	 113
+LOOP_PATH		Near   MAIN_SEGMENT:0317	   #206	 213
+NEXT			Near   MAIN_SEGMENT:0238	   62  #64
+NULL_TAIL		Byte   MAIN_SEGMENT:0210	   #50	165
+PATH			Byte   MAIN_SEGMENT:01F8	   #46	202
+PRINT			Near   MAIN_SEGMENT:0287	   #125	 136  145  167	174  191  203
+PRINT_CONTENT		Near   MAIN_SEGMENT:02D4	   #172	 222
+PRINT_SEG_ADR_FIRST	Near   MAIN_SEGMENT:028C	   #131	 219
+PRINT_SWG_ADR_ENV	Near   MAIN_SEGMENT:029C	   #140	 220
+PRINT_TAIL_COM_STR	Near   MAIN_SEGMENT:02AC	   #149	 221
+READTAIL		Near   MAIN_SEGMENT:02BD	   #156	 161
+READ_PATH		Near   MAIN_SEGMENT:0308	   196	#198
+READ_STRING		Near   MAIN_SEGMENT:02E0	   #177	 197
+SEG_ADR_ENV		Byte   MAIN_SEGMENT:013E	   #18	142  144
+SEG_ADR_FIRST		Byte   MAIN_SEGMENT:0103	   #9  132  135
+START			Near   MAIN_SEGMENT:0100	   #4  230
+TAIL_COM_STR		Byte   MAIN_SEGMENT:017F	   #28	151  162
+TETR_TO_HEX		Near   MAIN_SEGMENT:0230	   #59	72  76
+WRD_TO_HEX		Near   MAIN_SEGMENT:024C	   #81	134  143
+
+Groups & Segments	Bit Size Align	Combine	Class	   Cref	(defined at #)
+
+MAIN_SEGMENT		16  0338 Para	none		   #1  2  2
+
