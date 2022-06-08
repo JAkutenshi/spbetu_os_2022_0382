@@ -120,7 +120,7 @@ rout proc far
 rout endp
 
 load_rout proc near
-	move keep_psp, es
+	mov keep_psp, es
 	push dx
 	push ax
 	push cx
