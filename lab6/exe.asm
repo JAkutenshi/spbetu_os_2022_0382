@@ -10,7 +10,7 @@ DATA SEGMENT
     fcb2 dd 0
 
     next_com_line db 1h, 0dh
-    file_name db 'LAB2.com', 0h
+    file_name db 'LB2.com', 0h
     file_path db 128 DUP(0)
 
     keep_SS dw 0
