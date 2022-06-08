@@ -66,12 +66,12 @@ FREE_MEMORY PROC
 
 error_7:
 	cmp ax, 7
-	jne error_8
+	jne _error_8
 	mov dx, offset MEMORY_ERROR_7
 	call PRINT
 	jmp exit_free
 
-error_8:
+_error_8:
 	cmp ax, 8
 	jne error_9
 	mov dx, offset MEMORY_ERROR_8
@@ -122,7 +122,7 @@ LOAD_FILE PROC
 	jnc load_okey
 	
 	cmp ax, 1
-	jne error_no_file
+	jne err_2
 
 	mov dx, offset ERROR_1
 	call PRINT
