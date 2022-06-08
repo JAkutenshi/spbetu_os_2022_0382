@@ -13,114 +13,94 @@ DATA ENDS
 CODE   SEGMENT
 ASSUME  CS:CODE, DS:DATA, SS:AStack
 
-get_curs proc near
-
-	mov AH, 03h
-	mov BH, 0
-	int 10h
-
-	ret
-get_curs endp
-
-
-set_curs proc near
-
-	mov AH, 02h
-	mov BH, 0
-	int 10h
-
-	ret
-set_curs endp
-
 
 rout proc far
 	jmp start
 	signature dw 1234h
 	keep_psp dw 0
-	keep_cs dw 0
 	keep_ip dw 0
+	keep_cs dw 0
 	keep_ss dw 0
 	keep_sp dw 0
 	keep_ax dw 0
-	printed_symbol db 0
-	IStack db 128 dup(?)
+	key_sym db 0
+	IStack db 50 dup(" ")
 
+start:
+	mov keep_ax, ax
+	mov ax, ss
+	mov keep_ss, ax
+	mov keep_sp, sp
+	mov ax, seg IStack
+	mov ss, ax
+	mov sp, offset start
+
+	push ax
+	push bx
 	push cx
-	push es	
+	push dx
 
+	in al, 60h
+	cmp al, 10h
+	je q_key
+	cmp al, 11h
+	je w_key
+	cmp al, 12h
+	je e_key
 
-	start:
-		mov keep_ax, ax
-		mov ax, ss
-		mov keep_ss, ax
-		mov keep_sp, sp
-		mov ax, seg IStack
-		mov ss, ax
-		mov sp, offset start
+	call dword ptr cs:keep_ip
+	jmp exit_int
 
-		in al, 60h
-		cmp al, 2
-		jmp first_code
-		cmp al, 3
-		jmp second_code
-		cmp al, 4
-		jmp third_code
+q_key:
+	mov key_sym, 'r'
+	jmp process_hardware_int
+w_key:
+	mov key_sym, 't'
+	jmp process_hardware_int
+e_key:
+	mov key_sym, 'y'
 	
-	call_standart:
-		call dword ptr cs:keep_ip
-		jmp exit_route
+process_hardware_int:
+	in al, 61h
+    mov ah, al
+    or al, 80h
+    out 61h, al
+    xchg al, al
+    out 61h, al
+    mov al, 20h
+    out 20h, al
 
-	first_code:
-		mov printed_symbol, 'x'
-		jmp do_req
-	second_code:
-		mov printed_symbol, 'y'
-		jmp do_req
-	third_code:
-		mov printed_symbol, 'z'
-		jmp do_req
-
-	do_req:
-		in al, 61h
-    	mov ah, al
-    	or al, 80h
-    	out 61h, al
-    	xchg al, al
-    	out 61h, al
-    	mov al, 20h
-    	out 20h, al		
-
-    key_output:
+print_key:
     	mov ah, 05h
-    	mov cl, printed_symbol
+    	mov cl, key_sym
     	mov ch, 00h
     	int 16h
     	or al, al
-    	jz exit_route
+    	jz exit_int
     	mov ax, 40h
     	mov es, ax
-    	mov ax, es:[1ah]
-    	mov es:[1ch], ax
-    	jmp key_output  	
+    	mov ax, ES:[1Ah]
+    	mov ES:[1Ch], ax
+    	jmp print_key
 
-    exit_route:
-    	pop es
-    	pop cx
+exit_int:	
+	pop dx
+	pop cx
+	pop bx
+	pop ax
 
-		mov sp, keep_sp
-		mov ax, keep_ss
-		mov ss, ax
-		mov ax, keep_ax
-		mov al, 20h
-		out 20h, al
-		iret
-
+	mov sp, keep_sp
+	mov ax, keep_ss
+	mov ss, ax
+	mov ax, keep_ax
+	mov al, 20h
+	out 20h, al
+	iret
 
 	route_end:
 rout endp
 
 load_rout proc near
-	mov keep_psp, es
 	push dx
 	push ax
 	push cx
@@ -161,7 +141,7 @@ unload_rout proc near
 	push bx
 
 	mov AH, 35h
-	mov AL, 1Ch
+	mov AL, 09h
 	int 21h
 
 	cli 
@@ -200,7 +180,7 @@ load_check proc near
 	push ax
 
 
-	mov ax, 351Ch
+	mov ax, 3509h
 	int 21h
 	mov si, offset signature
 	sub si, offset rout
@@ -302,6 +282,7 @@ MAIN proc far
 	main endp
 code ends
 end main
+
 
 
 
