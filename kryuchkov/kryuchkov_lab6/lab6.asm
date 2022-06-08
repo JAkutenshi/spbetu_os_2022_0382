@@ -132,7 +132,7 @@ module_path proc near
     jmp name_slash
 
     name_current_folder:
-    mov di, offset file_name
+    mov di, offset target_file
     inc bx
 
     file_name:
@@ -207,7 +207,7 @@ load proc far
     mov dx, offset next_com_line
     mov com_flag, dx
     mov com_seg, ds 
-    mov dx, offset target_file
+    mov dx, offset file_path
 
     mov ax, 4b00h 
     int 21h 
