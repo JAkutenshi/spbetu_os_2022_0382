@@ -4,11 +4,7 @@ AStack ENDS
 
 DATA SEGMENT
 	FREE_MEM_ERR	DB '[ERROR]: Failed to free memory', 0DH, 0AH, '$'
-<<<<<<< HEAD
 	MEM_SUCCESS    DB '[MESSAGE]: Memory free has done succefully.', 0DH, 0AH, '$'
-=======
-	MEM_SUCCESS    DB '[MESSAGE]: Memory free has done succefully.', 0DH, 0AH, '$'
->>>>>>> f3db84eea6e04e8dcbe3a3071a402029820932d0
 	PARAM_BLOCK	DW 0 ; segment address of the environment
 			DD 0 ; segment and offset of the command string
 			DD 0 ; segment and offset of the first FCB
