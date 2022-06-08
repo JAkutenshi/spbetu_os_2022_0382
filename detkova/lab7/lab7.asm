@@ -1,32 +1,33 @@
-AStack SEGMENT  STACK
-          DB 100H DUP('!')
-AStack ENDS
+AStack    SEGMENT  STACK
+    DB 100 DUP('!')   
+AStack    ENDS
 
-
-DATA SEGMENT
-
+DATA  SEGMENT
+        
     ErrorMSG db 'Memory free up error: $'
     Err7MSG db 'Memory control block (MCB) is destroyed.', 0DH, 0AH, '$'
     Err8MSG db 'Not enought memory to execute the function.', 0DH, 0AH, '$'
     Err9MSG db 'Incorrect memory block address.', 0DH, 0AH, '$'
     SuccesFreeMSG db 'Memory was freed up successfuly.', 0DH, 0AH, '$'
     flag db 0
-    
+        
     KEEP_SS dw 0
     KEEP_SP dw 0
     DTA db 43 dup(?)
     OverlayAdress dd 0
+    LaunchParametrs dw 0,0
     
     FileName1 db 'overlay1.ovl$'
     FileName2 db 'overlay2.ovl$'
     PathName db 50 dup (0)
     NewLine db 0DH, 0AH, '$'
-    
+	
     AllocErr db 'Allocation error: $'
     AllocErr2 db 'File is not found.', 0DH, 0AH, '$'
     AllocErr3 db 'Path is not found.', 0DH, 0AH, '$'
     AllocSuccessful db 'Allocation is successful.', 0DH, 0AH, '$'
-    
+    AllocForOvlErr db 'Alloc free up memory error.',0DH,0AH,'$'
+	
     LoadErr db 'Overlay loading error: $'
     LoadErr1MSG db 'Non-existent function.', 0DH, 0AH, '$'
     LoadErr2MSG db 'File is not found.', 0DH, 0AH, '$'
@@ -39,38 +40,9 @@ DATA SEGMENT
     
 DATA ENDS
 
-
 CODE SEGMENT
 
 ASSUME CS:CODE, SS:AStack, DS:DATA
-
-
-BYTE_TO_DEC PROC NEAR
-
-    push CX
-    push DX
-    xor AH,AH
-    xor DX,DX
-    mov CX,10
-  loop_bd:
-    div CX
-    or DL,30h
-    mov [SI],DL
-    dec SI
-    xor DX,DX
-    cmp AX,10
-    jae loop_bd
-    cmp AL,00h
-    je end_l
-    or AL,30h
-    mov [SI],AL
-  
-  end_l:
-    pop DX
-    pop CX
-    ret
-    
-BYTE_TO_DEC ENDP
 
 
 _PRINT PROC NEAR
@@ -191,8 +163,6 @@ GET_PATH PROC NEAR
    
  path_end:
     mov DL,BX[7]
-    mov PathName[10],DL
-    mov PathName[SI],'$'
     pop ES
     pop DI
     pop SI
@@ -204,12 +174,14 @@ GET_PATH PROC NEAR
 GET_PATH ENDP
 
 
-ALLOCATION PROC NEAR
 
+ALLOCATION PROC NEAR
+	
     push AX
     push BX
     push CX
     push DX
+    PUSH BP
     
     mov DX,offset DTA
     mov AH,1AH
@@ -221,7 +193,7 @@ ALLOCATION PROC NEAR
     int 21H
     
     jnc success_alloc
-    
+	
     mov DX,offset AllocErr
     call _PRINT
     
@@ -231,60 +203,50 @@ ALLOCATION PROC NEAR
     
     mov DX,offset AllocErr3
     jmp end_alloc
-    
+
   success_alloc:
-    mov DI,offset DTA
-    mov DX,[DI+1CH]
-    mov AX,[DI+1AH]
-    
-    mov BX,10H
-    div BX
-    inc AX
-    mov BX,AX
+
+    mov SI,offset DTA
+    add SI,1AH
+    mov BX,[SI]	
+    shr BX,4 
+    mov AX,[SI+2]	
+    shl AX,12
+    add BX,AX
+    add BX,2
     mov AH,48H
-    int 21H
-    
-    mov BX,offset OverlayAdress
-    mov CX,0H
-    mov [BX],AX
-    mov [BX+2],CX
-    
+    int 21h
+    jnc save_seg
+    lea DX,AllocForOvlErr
+    jmp end_alloc
+
+  save_seg:
     mov DX,offset AllocSuccessful
-    
+    mov LaunchParametrs,AX
+    mov LaunchParametrs+2,AX
+
   end_alloc:
     call _PRINT
-    
+    pop BP
     pop DX
     pop CX
     pop BX
-    pop DX
+    pop AX
     ret
-
+    
 ALLOCATION ENDP
 
-
 LOAD_OVERLAY PROC NEAR
-
     push AX
-    push BX
-    push CX
     push DX
-    push DS
     push ES
-    
-    mov KEEP_SP,SP
-    mov KEEP_SS,SS
-    mov AX,DATA
-    mov ES,AX
-    mov BX,offset OverlayAdress
-    mov DX,offset PathName
-    mov AX,4B03H
-    int 21h
-    
-    mov SP,KEEP_SP
-    mov SS,KEEP_SS
+	
+    lea DX,PathName
+    push DS
     pop ES
-    pop DS
+    lea BX, LaunchParametrs
+    mov AX,4B03h            
+    int 21H
     
     jnc loading_successful
     
@@ -324,64 +286,55 @@ LOAD_OVERLAY PROC NEAR
     jmp end_load
     
   loading_successful:
-     mov DX,offset LoadSuccessful
-     call _PRINT
-     
-     mov BX,offset OverlayAdress
-     mov AX,[BX]
-     mov CX,[BX+2]
-     mov [BX],CX
-     mov [BX+2],AX
-     
-     call OverlayAdress
-     
-     mov ES,AX
-     mov AH,49H
-     int 21H
+    mov DX,offset LoadSuccessful
+    call _PRINT
+    mov AX,LaunchParametrs
+    mov word ptr OverlayAdress+2,AX
     
+    call OverlayAdress
+    
+    mov ES,AX
+    mov AH, 49H
+    int 21H
+	
   end_load:
-    
+    pop ES
     pop DX
-    pop CX
-    pop BX
     pop AX
     ret
-
 LOAD_OVERLAY ENDP
 
 
-MAIN	  PROC  FAR
-
-    sub AX,AX
-    push AX  
-    mov AX,DATA
-    mov DS,AX
-    
-    call FREE_UP_MEMORY
-    cmp flag,0
-    jne final
-    
-    mov DX,offset NewLine
-    call _PRINT
-    mov BX,offset FileName1
-    call GET_PATH
-    call ALLOCATION
-    call LOAD_OVERLAY
-    
-    mov DX,offset NewLine
-    call _PRINT
-    mov BX,offset FileName2
-    call GET_PATH
-    call ALLOCATION
-    call LOAD_OVERLAY
-    
-  final:  
-    mov AH,4CH
-    xor AL,AL
-    int 21H             
-                                            
-Main      ENDP
-
+MAIN PROC FAR
+	sub   AX,AX
+	push  AX
+	mov   AX,DATA
+	mov   DS,AX
+   
+	call FREE_UP_MEMORY
+	cmp flag,0
+	jne final
+	mov DX,offset NewLine
+	call _PRINT
+	
+	lea bx,FileName1
+   	call GET_PATH
+	call ALLOCATION
+	call LOAD_OVERLAY
+	
+	mov DX,offset NewLine
+	call _PRINT
+	
+	lea bx,FileName2
+   	call GET_PATH
+	call ALLOCATION
+	call LOAD_OVERLAY
+   
+   final:
+	xor AL,AL
+	mov AH,4Ch
+	int 21H
+MAIN ENDP
 end_program:
-CODE      ENDS
-          END MAIN
+CODE ENDS
+      END MAIN 
