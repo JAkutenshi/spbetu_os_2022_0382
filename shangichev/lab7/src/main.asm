@@ -272,15 +272,6 @@ no_err_load:
 	mov ax, parametr_block[2]
 	mov word ptr overlayaddress+2, ax
 	call overlayaddress
-
-	call free_mem
-	cmp free_mem_flag, 0
-	jne end_main
-	
-	mov si, offset overlay1_name
-	call get_params
-	call get_filesize
-	cmp bx, 0
 	
 	mov es, ax
 	mov ah, 49h
@@ -300,6 +291,15 @@ main 	proc far
 	mov ax, data
 	mov ds, ax
 	mov keep_psp, es
+
+	call free_mem
+	cmp bx, 0
+	jne end_main
+	
+	mov si, offset overlay1_name
+	call get_params
+	call get_filesize
+	cmp bx, 0
 	jne load_second
 	call memory_for_overlay
 	cmp bx, 0
