@@ -1,4 +1,3 @@
-; Шаблон текста программы на ассемблере для модуля типа .COM
 TESTPC SEGMENT
     ASSUME CS:TESTPC, DS:TESTPC, ES:NOTHING, SS:NOTHING
     ORG 100H
