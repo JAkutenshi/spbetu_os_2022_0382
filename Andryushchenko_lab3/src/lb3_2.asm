@@ -7,7 +7,7 @@ START:	jmp BEGIN
 AVAIL_MEM db 'Available memory:           ', 0DH, 0AH, '$'
 EXTEND_MEM db 'Extended memory:            ', 0DH, 0AH, '$'
 MCB_I db 'MCB num   , MCB adress:     h, PCP adress:     h, size:      , SC/SD:           ', 0DH, '$'
-ERROR db 'I can't get extra memory(', 0DH, 0AH, '$'
+ERROR db 'I cant get extra memory(', 0DH, 0AH, '$'
 SUCCEC db 'I get extra memory)', 0DH, 0AH, '$'
 ; ПРОЦЕДУРЫ
 TETR_TO_HEX PROC near
