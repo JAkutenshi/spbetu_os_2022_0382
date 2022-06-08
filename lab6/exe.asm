@@ -206,7 +206,7 @@ CODE SEGMENT
         mov DX, offset next_com_line
         mov com_off, DX
         mov com_seg, DS 
-        mov DX, offset file_name
+        mov DX, offset file_path
       
         mov AX, 4b00h 
         int 21h 
@@ -362,4 +362,4 @@ CODE SEGMENT
 main_fin:
 CODE ENDS
 
-END MAIN  
+END MAIN 
