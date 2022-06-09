@@ -10,7 +10,8 @@ data segment
             dd 0
             dd 0
 
-	file_name db 'lb2.com', 0	
+	file_name db 'lb2.com', 0
+	
 	path_ db 128 dup(0)
 	
 	cmd_line db 1h, 0dh
@@ -19,6 +20,11 @@ data segment
 	keep_sp dw 0
 	keep_psp dw 0
 
+	problem_ind DB 0
+	
+	
+	
+	Path_mes db 								'Path :', 0dh, 0ah,'$'
 
 	mem_free_mes db 					'memory was successfully free ' , 0dh, 0ah, '$'
 	
@@ -83,6 +89,8 @@ free_memory proc  near
 	
 	jnc end_proc
 
+	mov problem_ind, 1
+
 	cmp ax, 7
 	je error_crash
 	
@@ -91,6 +99,7 @@ free_memory proc  near
 	
 	cmp ax, 9
 	je error_address
+	
 	
 error_crash:
 	mov dx, offset mcb_crash_mes
@@ -194,6 +203,22 @@ create_full_name:
 	mov di, offset path_
 	add di, cx
 	call str_plus_str
+
+	
+	mov dx, offset Path_mes
+	call print
+	
+	mov si, offset path_	
+print_path_deb:
+	mov dl, byte ptr [si]
+	mov ah, 02h
+	int 21h
+	inc si
+	cmp dl, 0
+	jne print_path_deb
+	
+	mov dx, offset endl_s
+	call print
 	
 	pop es
 	pop si
@@ -354,8 +379,6 @@ end_load:
 load endp
 
 
-
-
 main proc far
 
 	push ds
@@ -364,7 +387,11 @@ main proc far
 	mov ax, data
 	mov ds, ax
 	mov keep_psp, es
-	call free_memory 
+	call free_memory
+	
+	cmp problem_ind, 0
+	jne end_main
+		
 	call path
 	call load
 	
