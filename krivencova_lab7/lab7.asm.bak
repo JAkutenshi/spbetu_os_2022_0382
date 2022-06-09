@@ -94,18 +94,18 @@ last_content:
    add di,3h
    mov si,0
    
-write_path:
+write_patch:
    mov dl,es:[di]
    cmp dl,0h
    je delete_file_name
-   mov PATH[si],dl
+   mov PATCH[si],dl
    inc di
    inc si
-   jmp write_path
+   jmp write_patch
 
 delete_file_name:
    dec si
-   cmp PATH[si],'\'
+   cmp PATCH[si],'\'
    je ready_add_file_name
    jmp delete_file_name
    
@@ -117,12 +117,12 @@ add_file_name:
    inc di
    mov dl,bx[di]
    cmp dl,'$'
-   je set_path_end
-   mov PATH[si],dl
+   je set_patch_end
+   mov PATCH[si],dl
    jmp add_file_name
    
-set_path_end:
-   mov PATH[si],'$'
+set_patch_end:
+   mov PATCH[si],'$'
    pop es
    pop si
    pop di
@@ -140,7 +140,7 @@ OVL_SIZE PROC NEAR
 	lea dx,DTA
     int 21h
 	mov ah,4Eh
-    lea dx, PATH
+    lea dx, PATCH
 	mov cx,0
 	int 21h
 	jnc memory_allocation
@@ -188,7 +188,7 @@ LOAD_OVERLAY PROC NEAR
 	push ax
 	push dx
 	push es
-	lea dx,PATH
+	lea dx,PATCH
 	push ds
 	pop es
 	lea bx, LAUNCHING_SETTINGS
@@ -243,7 +243,7 @@ ENDM
 OVL_LOADING MACRO OVERLAY_NAME
 	push dx
 	MAKE_FILE_NAME OVERLAY_NAME
-	lea dx, PATH
+	lea dx, PATCH
 	call PRINT
 	call LINE
 	call OVL_SIZE
