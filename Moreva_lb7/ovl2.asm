@@ -1,77 +1,75 @@
-OVL2 SEGMENT
-	ASSUME CS:OVL2, DS:NOTHING, SS:NOTHING, ES:NOTHING
-	
-MAIN PROC FAR
-	push ax
-	push dx
-	push ds
-	push di
-	mov ax,cs
-	mov ds,ax
-	lea dx, LOADING
-	call PRINT
-	lea di, ADRESS
-	add di, 19
-	mov ax, cs
-	call WRD_TO_HEX
-	lea dx, ADRESS
-	call PRINT
-	pop di
-	pop ds
-	pop dx
-	pop ax
-	RETF
-MAIN ENDP
+OVL SEGMENT
+    ASSUME CS:OVL, DS:NOTHING, SS:NOTHING, ES:NOTHING
 
-TETR_TO_HEX PROC
-   and AL,0Fh
-   cmp AL,09
-   jbe next
-   add AL,07
-next:
-   add AL,30h
-   ret
+Main PROC FAR
+    	push DS
+    	push AX
+    	push DI
+    	push DX
+    	push BX
+   	mov DS, AX
+    	mov BX, offset SEG_ADDR
+    	add BX, 21
+    	mov DI, BX
+    	mov AX, CS
+    	call WRD_TO_HEX
+    	mov DX, offset SEG_ADDR
+    	call PRINT
+    	pop BX
+    	pop DX
+    	pop DI
+    	pop AX
+    	pop DS
+    	retf
+Main ENDP
+
+PRINT PROC NEAR
+	push AX
+	mov AH, 09h
+	int 21h
+	pop AX
+	ret
+PRINT ENDP
+
+TETR_TO_HEX PROC near
+	and AL, 0Fh
+	cmp AL, 09
+	jbe NEXT
+	add AL, 07
+NEXT:	add AL, 30h
+	ret
 TETR_TO_HEX ENDP
 
-BYTE_TO_HEX PROC 
-   push CX
-   mov AH,AL
-   call TETR_TO_HEX
-   xchg AL,AH
-   mov CL,4
-   shr AL,CL
-   call TETR_TO_HEX ;в AL старшая цифра
-   pop CX ;в AH младшая
-   ret
+BYTE_TO_HEX PROC near
+	push CX
+	mov AH, AL
+	call TETR_TO_HEX
+	xchg AL, AH
+	mov CL, 4
+	shr AL, CL
+	call TETR_TO_HEX
+	pop CX		 
+	ret 
 BYTE_TO_HEX ENDP
 
 WRD_TO_HEX PROC near
-   push BX
-   mov BH,AH
-   call BYTE_TO_HEX
-   mov [DI],AH
-   dec DI
-   mov [DI],AL
-   dec DI
-   mov AL,BH
-   call BYTE_TO_HEX
-   mov [DI],AH
-   dec DI
-   mov [DI],AL
-   pop BX
-   ret
+	push BX
+	mov BH, AH
+	call BYTE_TO_HEX
+	mov [DI], AH
+	dec DI
+	mov [DI], AL
+	dec DI
+	mov AL, BH
+	call BYTE_TO_HEX
+	mov [DI], AH
+	dec DI
+	mov [DI], AL
+	pop BX
+	ret
 WRD_TO_HEX ENDP
 
-PRINT PROC 
-   push AX
-   mov AH,09h
-   int 21h
-   pop AX
-   ret
-PRINT ENDP
+SEG_ADDR  db ' Segment address:     h',0DH,0AH,'$'
 
-LOADING db 'OVL2.ovl is load!',13,10,'$'
-ADRESS db 'Segment adress:        ',13,10,'$'
-
-OVL2 ENDS
-END MAIN 
+OVL ENDS
+    END Main  

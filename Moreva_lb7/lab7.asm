@@ -1,285 +1,238 @@
-AStack    SEGMENT  STACK
-    DW 64 DUP(?)   
-AStack    ENDS
+AStack SEGMENT STACK
+    DW 100 DUP(?)
+AStack ENDS
 
-DATA  SEGMENT
-	NAME_OVL1 db 'OVL1.OVL$'
-	NAME_OVL2 db 'OVL2.OVL$'
-	PATH db 50 dup (0)
-	LAUNCHING_SETTINGS dw 0,0
-	ADDRESS_LAUNCH dd 0
-	DTA db 43 dup(0)
-	ERROR_FREEMEM db 'Memory release error',13,10,'$'
-	ERROR_DF db 'Defunct function', 13,10,'$'
-	ERROR_WF db 'File not found',13,10,'$'
-	ERROR_WR db 'Route not found',13,10,'$'
-	ERROR_MF db 'Too many files open',13,10,'$'
-	ERROR_NOT db 'Not available',13,10,'$'
-	CNTRL_MEMORY_BL db 'Breakdown Сontrol memory block',13,10,'$'
-	NO_MEMORY db 'Not enough free memory',13,10,'$'
-	WRONG_MEMORY db 'Wrong memory address',13,10,'$'
+DATA SEGMENT
+ERR_PATH db 'Path is not found!', 0DH,0AH,'$'
+ERR_NUM db 'Wrong number!', 0DH,0AH,'$'
+ERR_FILE db 'File is not found!', 0DH,0AH,'$'
+ERR_DISK db 'Disk error!', 0DH,0AH,'$'
+NO_MEM db 'Deficiency memory!', 0DH,0AH,'$'
+ERR_ENV db 'Wrong environment!', 0DH,0AH,'$'
+ERR_MCB db 'MCB is destroyed!', 0DH,0AH,'$'
+ERR_ADR db 'Invalid MCB adress!', 0DH,0AH,'$'
+ERR_ADD_MEM db 'Error by adding memory!', 0DH,0AH,'$'
+END_S db 0DH,0AH,'$'
+NAME_ db 64 DUP(0)
+DTA_BLOCK db 43 DUP(0)
+SEG_OVL dw 0
+ADDRESS_OVL dd 0
+KEEP_PSP dw 0
+PATH db 'Path: $'
+ OVL1 db 'ovl1.ovl', 0
+ OVL2 db 'ovl2.ovl', 0
 DATA ENDS
 
 CODE SEGMENT
-	ASSUME CS:CODE,DS:DATA,SS:AStack
+    ASSUME CS:CODE, DS:DATA, ES:DATA, SS:AStack
 
-PRINT PROC
+PRINT PROC NEAR
 	push AX
-	mov AH,09h
+	mov AH, 09h
 	int 21h
 	pop AX
 	ret
 PRINT ENDP
 
-FREEMEM PROC
-	push ax
-	push bx
-	lea bx, end_program
-	mov ax,es
-	sub bx,ax
-	mov ax,bx
-	shr bx,4
-	inc bx
-	mov ah,4ah
-	int 21h
-	jnc end_memory
-	lea dx, CNTRL_MEMORY_BL
-	cmp ax,7
-	je memory_write
-	lea dx, NO_MEMORY
-	cmp ax,7
-	je memory_write
-	lea dx,WRONG_MEMORY
-	cmp ax,7
-	je memory_write
-	jmp end_memory
-   
-memory_write:
-	call PRINT
-	jmp end_error_memory
-   
-end_memory:   
-	pop bx
-	pop ax
-	ret
-   
-end_error_memory:
-	pop bx
-	mov AH,4Ch
-	int 21H
-FREEMEM ENDP
+DTA_ PROC
+    	push DX
+    	mov DX, offset DTA_BLOCK
+    	mov AH, 1Ah
+    	int 21h
+    	pop DX
+DTA_ ENDP
 
+FREE_MEMORY PROC
+    	mov BX, offset LAST_BYTE
+   	mov AX, ES
+    	sub BX, AX
+    	mov CL, 4
+    	shr BX, CL
+    	mov AH, 4Ah
+    	int 21h
+    	jnc good
+    	cmp AX, 7
+    	mov DX, offset ERR_MCB
+    	je PRINT_MEM_ERR
+    	cmp AX, 8
+    	mov DX, offset ERR_ADR
+    	je PRINT_MEM_ERR
+    	cmp AX, 9
+    	mov DX, offset ERR_ADR
+PRINT_MEM_ERR:
+    	call PRINT
+    	xor AL, AL
+    	mov AH, 4Ch
+    	int 21h
+good:
+    	ret
+FREE_MEMORY ENDP
 
-SET_FULL_FILE_NAME PROC NEAR
-   push dx
-   push di
-   push si
-   push es
-   
-   xor di,di
-   mov es,es:[2ch]
-   
-skip_content:
-   mov dl,es:[di]
-   cmp dl,0h
-   je last_content
-   inc di
-   jmp skip_content
-      
-last_content:
-   inc di
-   mov dl,es:[di]
-   cmp dl,0h
-   jne skip_content
-   add di,3h
-   mov si,0
-   
-write_patch:
-   mov dl,es:[di]
-   cmp dl,0h
-   je delete_file_name
-   mov PATCH[si],dl
-   inc di
-   inc si
-   jmp write_patch
+GET_P PROC
+    	push ES
+    	mov ES, ES:[2Ch]
+    	xor SI, SI
+    	mov DI, offset NAME_
+step_1:
+    	add SI, 1
+    	cmp word ptr ES:[SI],0000h
+    	jne step_1
+    	add SI, 4
+step_2:
+    	cmp byte ptr ES:[SI],00h
+    	je step_3
+    	mov DL, ES:[SI]
+    	mov [DI], DL
+    	add SI, 1
+    	add DI, 1
+    	jmp step_2
+step_3:
+    	sub SI, 1
+    	sub DI, 1
+    	cmp byte ptr ES:[SI],'\'
+    	jne step_3
+    	add DI, 1
+   	mov SI, BX
+    	push DS
+    	pop ES
+step_4:
+    	lodsb
+    	stosb
+    	cmp AL, 0
+    	jne step_4
+    	mov byte ptr [DI],'$'
+    	mov DX, offset PATH
+    	call PRINT
+    	mov DX, offset NAME_
+    	call PRINT
+    	pop ES
+    	ret
+GET_P ENDP
 
-delete_file_name:
-   dec si
-   cmp PATCH[si],'\'
-   je ready_add_file_name
-   jmp delete_file_name
-   
-ready_add_file_name:
-   mov di,-1
+ADD_MEM_OVL PROC
+	push DS
+	push DX
+    	push CX
+    	xor CX, CX
+	mov DX, offset NAME_
+    	mov AH, 4Eh
+    	int 21h
+    	jnc V2
+    	cmp AX, 3
+	mov DX, offset ERR_PATH
+    	je V1
+	mov DX, offset ERR_FILE
+V1:
+    	call PRINT
+    	pop CX
+    	pop DX
+   	pop DS
+    	xor AL, AL
+    	mov AH, 4Ch
+    	int 21h
+V2:
+    	push ES
+    	push BX
+    	mov BX, offset DTA_BLOCK
+    	mov DX, [BX+1Ch]
+    	mov AX, [BX+1Ah]
+    	mov CL, 4h
+    	shr AX, CL
+    	mov CL, 12
+    	sal DX, CL
+    	add AX, DX
+    	add AX, 1
+    	mov BX, AX
+    	mov AH, 48h
+    	int 21h
+    	jc V3
+    	mov SEG_OVL, AX
+    	pop BX
+    	pop ES
+    	pop CX
+    	pop DX
+    	pop DS
+    	ret
+V3:
+    	mov DX, offset ERR_ADD_MEM
+    	call PRINT
+    	mov AH, 4Ch
+    	int 21h
+ADD_MEM_OVL ENDP
 
-add_file_name:
-   inc si
-   inc di
-   mov dl,bx[di]
-   cmp dl,'$'
-   je set_patch_end
-   mov PATCH[si],dl
-   jmp add_file_name
-   
-set_patch_end:
-   mov PATCH[si],'$'
-   pop es
-   pop si
-   pop di
-   pop dx
-   ret
-SET_FULL_FILE_NAME ENDP
+CHECK PROC
+    	cmp AX, 1
+    	mov DX, offset ERR_NUM
+    	je PRINT_ERR
+    	cmp AX, 2
+    	mov DX, offset ERR_FILE
+    	je PRINT_ERR
+    	cmp AX, 5
+    	mov DX, offset ERR_DISK
+    	je PRINT_ERR
+    	cmp AX, 8
+    	mov DX, offset NO_MEM
+    	je PRINT_ERR
+    	cmp AX, 10
+    	mov DX, offset ERR_ENV
+PRINT_ERR:
+    	call PRINT
+    	ret
+CHECK ENDP
 
-OVL_SIZE PROC NEAR
-	push ax
-	push bx
-	push cx
-	push dx
-	push bp
-	mov ah,1Ah
-	lea dx,DTA
-    int 21h
-	mov ah,4Eh
-    lea dx, PATCH
-	mov cx,0
-	int 21h
-	jnc memory_allocation
-	lea dx,ERROR_WF
-	cmp ax,2
-	je write_error_overlay_size
-	lea dx,ERROR_WR
-	cmp ax,3
-	je write_error_overlay_size
-	
-write_error_overlay_size:
-	call PRINT
-	jmp end_get_overlay_size
-
-memory_allocation:
-mov si, offset DTA
-	add si, 1Ah
-	mov bx, [si]	
-	shr bx, 4 
-	mov ax, [si+2]	
-	shl ax, 12
-	add bx, ax
-	add bx, 2
-    mov ah,48h
-    int 21h
-    jnc save_seg
-    lea dx,ERROR_FREEMEM
-    call PRINT
-    jmp end_get_overlay_size
-
-save_seg:
-    mov LAUNCHING_SETTINGS,ax
-    mov LAUNCHING_SETTINGS+2,ax
-
-end_get_overlay_size:	
-	pop bp
-	pop dx
-	pop cx
-	pop bx
-	pop ax
-	ret
-OVL_SIZE ENDP
-
-LOAD_OVERLAY PROC NEAR
-	push ax
-	push dx
-	push es
-	lea dx,PATCH
-	push ds
-	pop es
-	lea bx, LAUNCHING_SETTINGS
-	mov ax,4B03h            
-    int 21h
-	jnc success_load
-	lea dx, ERROR_DF
-	cmp ax,1
-	je write_error_load_overlay
-	lea dx, ERROR_WF
-	cmp ax,2
-	je write_error_load_overlay
-	lea dx, ERROR_WR
-	cmp ax,3
-	je write_error_load_overlay
-	lea dx, ERROR_MF
-	cmp ax,4
-	je write_error_load_overlay
-	lea dx, ERROR_NOT
-	cmp ax,5
-	je write_error_load_overlay
-	lea dx, NO_MEMORY
-	cmp ax,8
-	je write_error_load_overlay
-	
-write_error_load_overlay:
-	call PRINT
-	jmp end_overlay
-	
-success_load:
-	mov ax,LAUNCHING_SETTINGS
-    mov word ptr ADDRESS_LAUNCH + 2, ax
-    call ADDRESS_LAUNCH
-    mov es,ax
-	mov ah, 49h
-	int 21h
-	
-end_overlay:
-	pop es
-	pop dx
-	pop ax
-	ret
-LOAD_OVERLAY ENDP
-
-MAKE_FILE_NAME MACRO OVERLAY_NAME
-   	push bx
-	lea bx,OVERLAY_NAME
-   	call SET_FULL_FILE_NAME
-   	pop bx
-ENDM
-
-OVL_LOADING MACRO OVERLAY_NAME
-	push dx
-	MAKE_FILE_NAME OVERLAY_NAME
-	lea dx, PATCH
-	call PRINT
-	call LINE
-	call OVL_SIZE
-	call LOAD_OVERLAY
-	call LINE
-	pop dx
-ENDM 
-
-
-LINE PROC
-   push dx
-   push ax
-   mov dl,10
-   mov ah,02h
-   int 21h
-   mov dl,13
-   mov ah,02h
-   int 21h  
-   pop ax
-   pop dx
-   ret
-LINE ENDP
+LOAD_OVL PROC
+    	push DX
+    	push BX
+   	push AX
+    	mov BX, SEG SEG_OVL
+    	mov ES, BX
+    	mov BX, offset SEG_OVL
+    	mov DX, offset NAME_
+   	mov AX, 4B03h
+    	int 21h
+    	jnc LOAD
+    	call CHECK
+    	jmp OFF_OVL
+LOAD:
+    	mov AX, DATA
+    	mov DS, AX
+    	mov AX, SEG_OVL
+    	mov word ptr ADDRESS_OVL+2, AX
+    	call ADDRESS_OVL
+    	mov AX, SEG_OVL
+    	mov ES,AX
+    	mov AX, 4900h
+    	int 21h
+    	mov AX, DATA
+    	mov DS, AX
+OFF_OVL:
+    	mov ES, KEEP_PSP
+    	pop AX
+    	pop BX
+    	pop DX
+    	ret
+LOAD_OVL ENDP
 
 Main PROC FAR
-	sub   AX,AX
-	push  AX
-	mov   AX,DATA
-	mov   DS,AX
-	call FREEMEM
-	call LINE
-	OVL_LOADING NAME_OVL1
-	OVL_LOADING NAME_OVL2
-	xor AL,AL
-	mov AH,4Ch
-	int 21H
+    	mov AX, DATA
+    	mov DS, AX
+    	mov KEEP_PSP, ES
+    	mov DX, offset END_S
+    	call PRINT
+    	call FREE_MEMORY
+    	call DTA_
+    	mov BX, offset OVL1
+    	call GET_P
+    	call ADD_MEM_OVL
+    	call LOAD_OVL
+    	mov BX, offset OVL2
+    	call GET_P
+    	call ADD_MEM_OVL
+    	call LOAD_OVL
+    	mov AH, 4Ch
+    	int 21h
 Main ENDP
-end_program:
+	
+	LAST_BYTE:
 CODE ENDS
-      END Main 
+    END Main
