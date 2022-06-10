@@ -10,7 +10,7 @@ DATA SEGMENT
     fcb2 dd 0
 
     next_com_line db 1h, 0dh
-    file_name db 'LAB2.com', 0h
+    file_name db 'lb2.com', 0h
     file_path db 128 DUP(0)
 
     keep_SS dw 0
@@ -206,7 +206,7 @@ CODE SEGMENT
         mov DX, offset next_com_line
         mov com_off, DX
         mov com_seg, DS 
-        mov DX, offset file_name
+        mov DX, offset file_path
       
         mov AX, 4b00h 
         int 21h 
